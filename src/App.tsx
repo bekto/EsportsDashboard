@@ -10,10 +10,13 @@ import SettingsPanel from './components/SettingsPanel'
 
 function SkeletonCard() {
   return (
-    <div className="animate-pulse rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 motion-safe:animate-pulse">
       <div className="h-3 w-1/3 rounded bg-zinc-800" />
-      <div className="mt-3 h-6 rounded bg-zinc-800" />
-      <div className="mt-2 h-6 rounded bg-zinc-800" />
+      <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+        <div className="h-6 rounded bg-zinc-800/70" />
+        <div className="h-5 w-16 rounded bg-zinc-800" />
+        <div className="h-6 rounded bg-zinc-800/70" />
+      </div>
     </div>
   )
 }
@@ -40,6 +43,27 @@ export default function App() {
   const sections = useMemo(() => leagueSections(leagues, events, prefs), [leagues, events, prefs])
   const allLeagues = useMemo(() => allLeagueSlugsWithEvents(leagues, events), [leagues, events])
   const visibleOrder = sections.map((s) => s.slug)
+  const liveCount = events.filter((e) => e.state === 'inProgress').length
+  const nav = useMemo(
+    () =>
+      sections.length === 0
+        ? []
+        : [
+            {
+              href: '#hot',
+              label: 'HOT',
+              image: null as string | null,
+              live: hot.some((e) => e.state === 'inProgress'),
+            },
+            ...sections.map((s) => ({
+              href: `#league-${s.slug}`,
+              label: s.name,
+              image: s.image,
+              live: s.upcoming.some((e) => e.state === 'inProgress'),
+            })),
+          ],
+    [sections, hot],
+  )
 
   const noData = events.length === 0 && leagues.length === 0
 
@@ -49,6 +73,8 @@ export default function App() {
         fetchedAt={fetchedAt}
         now={now}
         loading={loading}
+        liveCount={liveCount}
+        nav={nav}
         onRefresh={refresh}
         onSettings={() => setSettingsOpen(true)}
       />
@@ -91,7 +117,9 @@ export default function App() {
                 ))}
               </div>
             ) : (
-              <p className="py-8 text-center text-zinc-400">No upcoming matches</p>
+              <p className="rounded-xl border border-dashed border-zinc-800 py-12 text-center text-zinc-400">
+                📅 No upcoming matches
+              </p>
             )}
           </div>
         )}
