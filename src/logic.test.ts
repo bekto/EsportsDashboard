@@ -122,9 +122,11 @@ describe('hotMatches', () => {
   it('keeps only score >= 30 inside the 7-day window, re-sorted by time', () => {
     const live = event({ id: 'live', slug: 'worlds', state: 'inProgress', block: 'Playoffs', count: 5 })
     const soon = event({ id: 'soon', slug: 'lck', start: iso(48), count: 3 })
+    const later = event({ id: 'later', slug: 'worlds', block: 'Playoffs', count: 5, start: iso(72) })
     const far = event({ id: 'far', slug: 'worlds', block: 'Finals', count: 5, start: iso(8 * 24) })
     const cold = event({ id: 'cold', slug: 'nacl', start: iso(24), count: 1 })
-    expect(ids(hotMatches([far, cold, soon, live], NOW))).toEqual(['live', 'soon'])
+    // 'later' outscores 'soon' (75 vs 40) but must still come after it: score selects, time orders
+    expect(ids(hotMatches([far, later, cold, soon, live], NOW))).toEqual(['live', 'soon', 'later'])
   })
 
   it('caps the selection at HOT_LIMIT', () => {

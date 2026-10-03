@@ -88,8 +88,8 @@ export default function MatchCard({
         </span>
       </div>
       <div className="flex flex-col gap-1.5">
-        {event.match.teams.map((t) => (
-          <TeamRow key={`${t.name}-${t.code}`} team={t} completed={completed} />
+        {event.match.teams.map((t, i) => (
+          <TeamRow key={i} team={t} completed={completed} />
         ))}
       </div>
     </a>

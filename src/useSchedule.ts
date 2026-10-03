@@ -24,7 +24,8 @@ function readCache(): Cache | null {
 
 export function useSchedule() {
   const [data, setData] = useState<Cache | null>(readCache)
-  const [loading, setLoading] = useState(false)
+  // true from first render when a fetch is about to happen → skeleton instead of a flash of empty state
+  const [loading, setLoading] = useState(() => !data || Date.now() - data.fetchedAt > TTL_MS)
   const [error, setError] = useState<string | null>(null)
   const inFlight = useRef(false)
   const dataRef = useRef(data)
