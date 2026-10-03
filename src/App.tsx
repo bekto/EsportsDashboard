@@ -68,7 +68,7 @@ export default function App() {
   const noData = events.length === 0 && leagues.length === 0
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen text-zinc-100">
       <Header
         fetchedAt={fetchedAt}
         now={now}
@@ -111,7 +111,7 @@ export default function App() {
           <div className="flex flex-col gap-4">
             <HotSection events={hot} now={now} />
             {sections.length > 0 ? (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {sections.map((section) => (
                   <LeagueSection key={section.slug} section={section} now={now} />
                 ))}

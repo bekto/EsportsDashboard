@@ -219,6 +219,7 @@ describe('dayLabel / ago', () => {
   it('labels local calendar days', () => {
     expect(dayLabel(dayStart + 3600_000, dayStart)).toBe('Today')
     expect(dayLabel(dayStart + 25 * 3600_000, dayStart)).toBe('Tomorrow')
+    expect(dayLabel(dayStart - 3600_000, dayStart)).toBe('Yesterday')
     expect(dayLabel(dayStart + 3 * 86400_000, dayStart)).toMatch(/\w{3}.*\d/)
   })
 

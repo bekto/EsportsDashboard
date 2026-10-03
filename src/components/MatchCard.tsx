@@ -2,11 +2,11 @@ import { Fragment, useState } from 'react'
 import type { ScheduleEvent, Team } from '../api'
 import { countdown, dayLabel, formatLocal, formatTime } from '../time'
 
-function TeamLogo({ team }: { team: Team }) {
+export function TeamLogo({ team, size = 'h-7 w-7 text-[10px]' }: { team: Team; size?: string }) {
   const [failed, setFailed] = useState(false)
   if (!team.image || team.code === 'TBD' || failed) {
     return (
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-zinc-800 text-[10px] font-bold text-zinc-300">
+      <span className={`flex shrink-0 items-center justify-center rounded-md bg-zinc-800 font-bold text-zinc-400 ${size}`}>
         {team.code === 'TBD' ? '?' : team.code.slice(0, 3)}
       </span>
     )
@@ -17,8 +17,16 @@ function TeamLogo({ team }: { team: Team }) {
       alt=""
       loading="lazy"
       onError={() => setFailed(true)}
-      className="h-7 w-7 shrink-0 object-contain"
+      className={`shrink-0 object-contain ${size}`}
     />
+  )
+}
+
+export function ExternalIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={`h-3.5 w-3.5 ${className}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M7 17 17 7M8 7h9v9" />
+    </svg>
   )
 }
 
@@ -58,10 +66,13 @@ export default function MatchCard({
   event,
   now,
   showLeague = false,
+  showDay = false,
 }: {
   event: ScheduleEvent
   now: number
   showLeague?: boolean
+  /** Day label inside the card, for lists that have no day dividers */
+  showDay?: boolean
 }) {
   const live = event.state === 'inProgress'
   const completed = event.state === 'completed'
@@ -73,14 +84,37 @@ export default function MatchCard({
   const aWon = a?.result?.outcome === 'win'
   const bWon = b?.result?.outcome === 'win'
   const soon = startMs - now < 3600_000
+  const linkProps = {
+    href,
+    target: '_blank',
+    rel: 'noreferrer',
+    title: `${a?.name ?? 'TBD'} vs ${b?.name ?? 'TBD'} · ${formatLocal(startMs)}`,
+  }
+
+  // Both teams undecided: nothing to compare, so a slim row instead of a full card
+  if (!live && !completed && event.match.teams.every((t) => t.code === 'TBD')) {
+    return (
+      <a
+        {...linkProps}
+        className="group flex items-center gap-2 rounded-lg border border-dashed border-zinc-800 px-3 py-2 text-xs text-zinc-500 transition-colors hover:border-zinc-700 hover:bg-zinc-900"
+      >
+        {showLeague && <span className="truncate text-zinc-300">{event.league.name}</span>}
+        <span className="shrink-0 font-medium text-zinc-400">Bo{event.match.strategy.count}</span>
+        {event.blockName && <span className="truncate">{event.blockName}</span>}
+        <span className="shrink-0 text-zinc-600">TBD vs TBD</span>
+        <span className="ml-auto shrink-0 whitespace-nowrap tabular-nums">
+          {showDay && <span className="uppercase">{dayLabel(startMs, now)} </span>}
+          <span className="font-semibold text-zinc-300">{formatTime(startMs)}</span>
+          <span className={soon ? ' text-amber-400' : ''}> · {countdown(startMs, now)}</span>
+        </span>
+      </a>
+    )
+  }
 
   return (
     <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      title={`${a?.name ?? 'TBD'} vs ${b?.name ?? 'TBD'} · ${formatLocal(startMs)}`}
-      className={`block rounded-lg border bg-zinc-900 p-3 transition-colors hover:bg-zinc-800 ${
+      {...linkProps}
+      className={`group block rounded-lg border bg-zinc-900 p-3 transition-colors hover:bg-zinc-800/80 ${
         live ? 'border-red-500/60 ring-2 ring-red-500/20' : 'border-zinc-800 hover:border-zinc-700'
       }`}
     >
@@ -88,9 +122,10 @@ export default function MatchCard({
         {showLeague && <span className="truncate text-zinc-300">{event.league.name}</span>}
         <span className="shrink-0 font-medium text-zinc-300">Bo{event.match.strategy.count}</span>
         {event.blockName && <span className="truncate">{event.blockName}</span>}
-        {completed && (
-          <span className="ml-auto shrink-0 tabular-nums whitespace-nowrap">{formatTime(startMs)}</span>
-        )}
+        <span className="ml-auto flex shrink-0 items-center gap-1.5 whitespace-nowrap tabular-nums">
+          {completed && formatTime(startMs)}
+          <ExternalIcon className="text-zinc-500 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
+        </span>
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         {a && <TeamSide team={a} completed={completed} won={aWon} mirrored={false} />}
@@ -119,6 +154,11 @@ export default function MatchCard({
             </span>
           ) : (
             <span className="flex flex-col items-center">
+              {showDay && (
+                <span className="text-[10px] font-semibold tracking-wide whitespace-nowrap text-zinc-500 uppercase">
+                  {dayLabel(startMs, now)}
+                </span>
+              )}
               <span className="text-sm font-bold text-zinc-200 tabular-nums">
                 {formatTime(startMs)}
               </span>
@@ -138,26 +178,36 @@ export function MatchList({
   events,
   now,
   showLeague = false,
-  columns = 1,
+  grid = false,
 }: {
   events: ScheduleEvent[]
   now: number
   showLeague?: boolean
-  columns?: 1 | 2
+  /** 2-column grid on lg; day dividers would break the rows, so each card shows its own day */
+  grid?: boolean
 }) {
+  if (grid) {
+    return (
+      <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+        {events.map((event) => (
+          <MatchCard key={event.match.id} event={event} now={now} showLeague={showLeague} showDay />
+        ))}
+      </div>
+    )
+  }
   return (
-    <div className={columns === 2 ? 'grid grid-cols-1 gap-2 lg:grid-cols-2' : 'flex flex-col gap-2'}>
+    <div className="flex flex-col gap-2">
       {events.map((event, i) => {
         const startMs = Date.parse(event.startTime)
         const newDay =
           i === 0 ||
           new Date(startMs).toDateString() !== new Date(events[i - 1].startTime).toDateString()
-        const divider = newDay ? dayLabel(startMs, now) : null
         return (
           <Fragment key={event.match.id}>
-            {divider && (
-              <div className="col-span-full mt-1 text-xs font-semibold tracking-wide text-zinc-500 uppercase">
-                {divider}
+            {newDay && (
+              <div className="mt-1 flex items-center gap-2 text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">
+                {dayLabel(startMs, now)}
+                <span className="h-px flex-1 bg-zinc-800" />
               </div>
             )}
             <MatchCard event={event} now={now} showLeague={showLeague} />

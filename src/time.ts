@@ -54,6 +54,7 @@ export function dayLabel(ms: number, nowMs: number): string {
   const delta = Math.round((day(ms) - day(nowMs)) / 86400_000)
   if (delta === 0) return 'Today'
   if (delta === 1) return 'Tomorrow'
+  if (delta === -1) return 'Yesterday'
   return dateFmt.format(ms)
 }
 

@@ -11,7 +11,7 @@ export default function LeagueSection({ section, now }: { section: Section; now:
   return (
     <section
       id={`league-${section.slug}`}
-      className="scroll-mt-28 rounded-xl border border-zinc-800 bg-zinc-900/40 p-3"
+      className="scroll-mt-28 rounded-xl border border-zinc-800 bg-zinc-900/40 p-3 transition-colors hover:border-zinc-700/80"
     >
       <div className="mb-3 flex items-center gap-2">
         {section.image && (
@@ -45,7 +45,8 @@ export default function LeagueSection({ section, now }: { section: Section; now:
         <button
           type="button"
           onClick={() => setShowAll((v) => !v)}
-          className="mt-2 text-xs font-medium text-sky-400 hover:text-sky-300"
+          aria-expanded={showAll}
+          className="mt-2 w-full rounded-lg py-1.5 text-xs font-medium text-sky-400 transition-colors hover:bg-zinc-800/60 hover:text-sky-300"
         >
           {showAll ? 'Show less' : `Show all (${section.upcoming.length})`}
         </button>
@@ -59,8 +60,20 @@ export default function LeagueSection({ section, now }: { section: Section; now:
             aria-expanded={recentOpen}
             className="flex w-full items-center gap-1 text-xs font-medium text-zinc-400 hover:text-zinc-200"
           >
-            <span className={`transition-transform ${recentOpen ? 'rotate-90' : ''}`}>▶</span>
+            <svg
+              viewBox="0 0 24 24"
+              className={`h-3.5 w-3.5 transition-transform ${recentOpen ? 'rotate-90' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m9 6 6 6-6 6" />
+            </svg>
             Recent results
+            <span className="ml-auto font-normal text-zinc-600 tabular-nums">{section.recent.length}</span>
           </button>
           {recentOpen && (
             <div className="mt-2">
