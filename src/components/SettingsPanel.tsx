@@ -1,15 +1,24 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Prefs } from '../logic'
+import { StarIcon } from './MatchCard'
+
+interface TeamOption {
+  code: string
+  name: string
+  image: string
+}
 
 interface Props {
   open: boolean
   onClose: () => void
   all: { slug: string; name: string; image: string | null }[]
+  teams: TeamOption[]
   prefs: Prefs
   visibleOrder: string[]
   hide: (slug: string) => void
   unhide: (slug: string) => void
   move: (slug: string, dir: -1 | 1, visibleOrder: string[]) => void
+  toggleFavorite: (code: string) => void
   reset: () => void
 }
 
@@ -17,14 +26,17 @@ export default function SettingsPanel({
   open,
   onClose,
   all,
+  teams,
   prefs,
   visibleOrder,
   hide,
   unhide,
   move,
+  toggleFavorite,
   reset,
 }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
     const dialog = ref.current
@@ -32,6 +44,23 @@ export default function SettingsPanel({
     if (open && !dialog.open) dialog.showModal()
     else if (!open && dialog.open) dialog.close()
   }, [open])
+
+  // All teams in the current schedule, plus any favorited code that has since dropped out,
+  // so favorites can always be reviewed and removed.
+  const teamOptions = useMemo(() => {
+    const byCode = new Map(teams.map((t) => [t.code, t]))
+    for (const code of prefs.favorites) {
+      if (!byCode.has(code)) byCode.set(code, { code, name: code, image: '' })
+    }
+    return [...byCode.values()].sort((a, b) => a.name.localeCompare(b.name))
+  }, [teams, prefs.favorites])
+
+  const q = query.trim().toLowerCase()
+  const filteredTeams = q
+    ? teamOptions.filter(
+        (t) => t.code.toLowerCase().includes(q) || t.name.toLowerCase().includes(q),
+      )
+    : teamOptions
 
   const visible: Props['all'] = []
   for (const slug of visibleOrder) {
@@ -42,7 +71,7 @@ export default function SettingsPanel({
 
   const rowClass = 'flex w-full items-center gap-2 px-4 py-2'
 
-  const row = (league: Props['all'][number], isHidden: boolean) => {
+  const leagueRow = (league: Props['all'][number], isHidden: boolean) => {
     const idx = visibleOrder.indexOf(league.slug)
     return (
       <div key={league.slug} className={rowClass}>
@@ -87,6 +116,42 @@ export default function SettingsPanel({
     )
   }
 
+  const teamRow = (team: TeamOption) => {
+    const fav = prefs.favorites.includes(team.code)
+    return (
+      <button
+        key={team.code}
+        type="button"
+        onClick={() => toggleFavorite(team.code)}
+        aria-pressed={fav}
+        title={fav ? `Remove ${team.name} from favorites` : `Add ${team.name} to favorites`}
+        className={`flex w-full items-center gap-2 px-4 py-1.5 text-left transition-colors hover:bg-zinc-900 ${
+          fav ? 'text-amber-300' : 'text-zinc-300'
+        }`}
+      >
+        <StarIcon
+          filled={fav}
+          className={`h-4 w-4 shrink-0 ${fav ? 'text-amber-400' : 'text-zinc-600'}`}
+        />
+        {team.image ? (
+          <img
+            src={team.image}
+            alt=""
+            loading="lazy"
+            onError={(e) => (e.currentTarget.style.display = 'none')}
+            className="h-5 w-5 shrink-0 object-contain"
+          />
+        ) : (
+          <span className="h-5 w-5 shrink-0 rounded bg-zinc-800" />
+        )}
+        <span className="shrink-0 text-sm font-semibold">{team.code}</span>
+        <span className="min-w-0 flex-1 truncate text-xs text-zinc-500">
+          {team.name === team.code ? '' : team.name}
+        </span>
+      </button>
+    )
+  }
+
   return (
     <dialog
       ref={ref}
@@ -99,7 +164,7 @@ export default function SettingsPanel({
     >
       <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
         <h2 id="settings-title" className="font-semibold">
-          Leagues
+          Settings
         </h2>
         <button
           type="button"
@@ -112,22 +177,55 @@ export default function SettingsPanel({
       </div>
 
       <div className="flex-1 overflow-y-auto py-2">
+        <h3 className="flex items-center gap-2 px-4 pt-1 pb-1 text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+          <StarIcon className="h-3.5 w-3.5 text-amber-400" />
+          Favorite teams
+          {prefs.favorites.length > 0 && (
+            <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-300 tabular-nums">
+              {prefs.favorites.length}
+            </span>
+          )}
+        </h3>
+        <p className="px-4 pb-2 text-xs text-zinc-600">
+          Favorites are shown with a ★ and get a boost in HOT matches.
+        </p>
+        <div className="px-4 pb-2">
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search teams…"
+            aria-label="Search teams"
+            className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none"
+          />
+        </div>
+        {teamOptions.length === 0 ? (
+          <p className="px-4 pb-2 text-sm text-zinc-500">No teams in the current schedule</p>
+        ) : filteredTeams.length === 0 ? (
+          <p className="px-4 pb-2 text-sm text-zinc-500">No teams match “{query.trim()}”</p>
+        ) : (
+          filteredTeams.map(teamRow)
+        )}
+
+        <h3 className="px-4 pt-4 pb-1 text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+          Leagues
+        </h3>
         {all.length === 0 && <p className="px-4 text-sm text-zinc-500">No leagues</p>}
         {visible.length > 0 && (
           <>
-            <h3 className="px-4 pt-1 pb-1 text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+            <h4 className="px-4 pt-1 pb-1 text-[11px] font-semibold tracking-wide text-zinc-600 uppercase">
               Shown
-            </h3>
+            </h4>
             <p className="px-4 pb-1 text-xs text-zinc-600">Order is saved in this browser</p>
-            {visible.map((league) => row(league, false))}
+            {visible.map((league) => leagueRow(league, false))}
           </>
         )}
         {hidden.length > 0 && (
-          <h3 className="px-4 pt-3 pb-1 text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+          <h4 className="px-4 pt-3 pb-1 text-[11px] font-semibold tracking-wide text-zinc-600 uppercase">
             Hidden
-          </h3>
+          </h4>
         )}
-        {hidden.map((league) => row(league, true))}
+        {hidden.map((league) => leagueRow(league, true))}
       </div>
 
       <div className="border-t border-zinc-800 p-4">

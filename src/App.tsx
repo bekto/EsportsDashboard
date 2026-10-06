@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { allLeagueSlugsWithEvents, hotMatches, leagueSections } from './logic'
+import { allLeagueSlugsWithEvents, allTeamsWithEvents, hotMatches, leagueSections } from './logic'
 import { usePrefs } from './usePrefs'
 import { useSchedule } from './useSchedule'
 import { ago, useNow } from './time'
@@ -35,13 +35,14 @@ function RetryButton({ onClick }: { onClick: () => void }) {
 
 export default function App() {
   const { leagues, events, fetchedAt, loading, error, refresh } = useSchedule()
-  const { prefs, hide, unhide, move, reset } = usePrefs()
+  const { prefs, hide, unhide, move, reset, toggleFavorite } = usePrefs()
   const now = useNow()
   const [settingsOpen, setSettingsOpen] = useState(false)
 
-  const hot = useMemo(() => hotMatches(events, now), [events, now])
+  const hot = useMemo(() => hotMatches(events, now, prefs.favorites), [events, now, prefs.favorites])
   const sections = useMemo(() => leagueSections(leagues, events, prefs), [leagues, events, prefs])
   const allLeagues = useMemo(() => allLeagueSlugsWithEvents(leagues, events), [leagues, events])
+  const allTeams = useMemo(() => allTeamsWithEvents(events), [events])
   const visibleOrder = sections.map((s) => s.slug)
   const liveCount = events.filter((e) => e.state === 'inProgress').length
   const nav = useMemo(
@@ -109,11 +110,16 @@ export default function App() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            <HotSection events={hot} now={now} />
+            <HotSection events={hot} now={now} favorites={prefs.favorites} />
             {sections.length > 0 ? (
               <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {sections.map((section) => (
-                  <LeagueSection key={section.slug} section={section} now={now} />
+                  <LeagueSection
+                    key={section.slug}
+                    section={section}
+                    now={now}
+                    favorites={prefs.favorites}
+                  />
                 ))}
               </div>
             ) : (
@@ -129,11 +135,13 @@ export default function App() {
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         all={allLeagues}
+        teams={allTeams}
         prefs={prefs}
         visibleOrder={visibleOrder}
         hide={hide}
         unhide={unhide}
         move={move}
+        toggleFavorite={toggleFavorite}
         reset={reset}
       />
     </div>

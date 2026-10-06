@@ -53,6 +53,7 @@ Verified facts (probed, re-confirmed 2026-10-03):
   - `strategy.count === 5` +10; `=== 3` +5.
   - Any team `code === "TBD"` −20.
   - Both teams have `record` with ≥1 game and |winrate diff| ≤ 0.15 → +10.
+  - Any team (`code`) in `prefs.favorites` → +30 (`FAVORITE_BONUS`, enough on its own to reach the entry threshold).
   - `state === "inProgress"` +15.
 - `hotMatches(events, nowMs)`: candidates = `inProgress` or `unstarted` with start ≤ now + 7 days; keep `hotScore ≥ 30`; take top 8 by score; return them re-sorted with `sortUpcoming` (section is time-ordered, score only selects).
 - `leagueSections(leagues, events, prefs)`: group events by `league.slug`; include leagues with ≥1 live/upcoming event and not in `prefs.hidden`; order = `prefs.order` slugs first (in that order), then remaining by status rank (`force_selected` 0, `selected` 1, `not_selected` 2, `hidden` 3) then `displayPriority.position`. Events whose slug has no league entry → synthesize section from `event.league.name`, ranked last.
@@ -69,8 +70,8 @@ Verified facts (probed, re-confirmed 2026-10-03):
 - `LeagueSection`: header with league image + name + region; list upcoming (`sortUpcoming`), show first 6 with "Show all (N)" expander; collapsible "Recent results" (`recentResults`, collapsed by default).
 - HOT section: same cards, flame accent styling; if empty → "No hot matches in the next 7 days".
 - Skeleton cards while `loading` and no cache. Empty state if no sections: "No upcoming matches".
-- `SettingsPanel` (slide-over): list all leagues that have any events (sections + hidden), each row: checkbox show/hide, ↑/↓ buttons to reorder, "Reset" button. Use buttons, not drag-and-drop (no extra dependency).
-- Prefs in localStorage key `lolDash.prefs.v1`: `{hidden: string[] /*slugs*/, order: string[] /*slugs*/}`; `src/usePrefs.ts` hook, try/catch parse, default `{hidden:[], order:[]}`.
+- `SettingsPanel` (slide-over): a "Favorite teams" section (searchable list of teams in the schedule, star to toggle; favorites show a ★ on cards and score higher in HOT) followed by leagues: list all leagues that have any events (sections + hidden), each row: checkbox show/hide, ↑/↓ buttons to reorder, "Reset" button. Use buttons, not drag-and-drop (no extra dependency).
+- Prefs in localStorage key `lolDash.prefs.v1`: `{hidden: string[] /*slugs*/, order: string[] /*slugs*/, favorites: string[] /*team codes*/}`; `src/usePrefs.ts` hook, try/catch parse, default `{hidden:[], order:[], favorites:[]}`.
   - Reorder (↑/↓) writes the full current visible order into `order`.
   - Hide: add slug to `hidden`, remove it from `order`.
   - Unhide: remove slug from `hidden`, append it to the end of `order` (only if `order` is non-empty; if empty, it falls back to default ranking).

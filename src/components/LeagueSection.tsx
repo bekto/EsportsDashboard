@@ -2,7 +2,15 @@ import { useState } from 'react'
 import type { Section } from '../logic'
 import { MatchList } from './MatchCard'
 
-export default function LeagueSection({ section, now }: { section: Section; now: number }) {
+export default function LeagueSection({
+  section,
+  now,
+  favorites = [],
+}: {
+  section: Section
+  now: number
+  favorites?: readonly string[]
+}) {
   const [showAll, setShowAll] = useState(false)
   const [recentOpen, setRecentOpen] = useState(false)
   const visible = showAll ? section.upcoming : section.upcoming.slice(0, 6)
@@ -34,7 +42,7 @@ export default function LeagueSection({ section, now }: { section: Section; now:
       </div>
 
       {visible.length > 0 ? (
-        <MatchList events={visible} now={now} />
+        <MatchList events={visible} now={now} favorites={favorites} />
       ) : (
         <p className="rounded-lg border border-dashed border-zinc-800 py-4 text-center text-sm text-zinc-500">
           No upcoming matches
@@ -77,7 +85,7 @@ export default function LeagueSection({ section, now }: { section: Section; now:
           </button>
           {recentOpen && (
             <div className="mt-2">
-              <MatchList events={section.recent} now={now} />
+              <MatchList events={section.recent} now={now} favorites={favorites} />
             </div>
           )}
         </div>

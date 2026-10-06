@@ -1,12 +1,15 @@
 import type { ScheduleEvent, Team } from '../api'
 import { countdown, dayLabel, formatLocal, formatTime } from '../time'
-import { ExternalIcon, MatchList, TeamLogo } from './MatchCard'
+import { ExternalIcon, MatchList, StarIcon, TeamLogo } from './MatchCard'
 
-function SpotlightTeam({ team }: { team: Team }) {
+function SpotlightTeam({ team, favorite }: { team: Team; favorite: boolean }) {
   return (
     <div className="flex min-w-0 flex-col items-center gap-1.5 text-center">
       <TeamLogo team={team} size="h-12 w-12 text-sm sm:h-16 sm:w-16" />
-      <span className="text-lg font-bold sm:text-2xl">{team.code}</span>
+      <span className="text-lg font-bold sm:text-2xl">
+        {team.code}
+        {favorite && <StarIcon className="ml-1 inline-block h-3.5 w-3.5 align-text-top text-amber-400" />}
+      </span>
       <span className="w-full truncate text-xs text-zinc-400">{team.name}</span>
       {team.record && (
         <span className="text-[11px] text-zinc-500 tabular-nums">
@@ -18,10 +21,20 @@ function SpotlightTeam({ team }: { team: Team }) {
 }
 
 // The top HOT pick (live first, else soonest) gets a large featured card.
-function Spotlight({ event, now }: { event: ScheduleEvent; now: number }) {
+function Spotlight({
+  event,
+  now,
+  favorites,
+}: {
+  event: ScheduleEvent
+  now: number
+  favorites: readonly string[]
+}) {
   const live = event.state === 'inProgress'
   const startMs = Date.parse(event.startTime)
   const [a, b] = event.match.teams
+  const isFav = (team: Team) => favorites.includes(team.code)
+  const hasFav = (a && isFav(a)) || (b && isFav(b))
   return (
     <a
       href={live ? `https://lolesports.com/live/${event.league.slug}` : 'https://lolesports.com/schedule'}
@@ -43,13 +56,19 @@ function Spotlight({ event, now }: { event: ScheduleEvent; now: number }) {
         <span className="truncate text-zinc-300">{event.league.name}</span>
         <span className="shrink-0 font-medium text-zinc-300">Bo{event.match.strategy.count}</span>
         {event.blockName && <span className="hidden truncate sm:inline">{event.blockName}</span>}
+        {hasFav && (
+          <span className="flex shrink-0 items-center gap-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">
+            <StarIcon className="h-2.5 w-2.5" />
+            Favorite
+          </span>
+        )}
         <span className="ml-auto flex shrink-0 items-center gap-1 text-zinc-500 transition-colors group-hover:text-zinc-200">
           {live ? 'Watch' : 'Schedule'}
           <ExternalIcon />
         </span>
       </div>
       <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-8">
-        {a && <SpotlightTeam team={a} />}
+        {a && <SpotlightTeam team={a} favorite={isFav(a)} />}
         <div className="flex flex-col items-center text-center">
           {live ? (
             <>
@@ -79,13 +98,21 @@ function Spotlight({ event, now }: { event: ScheduleEvent; now: number }) {
             </>
           )}
         </div>
-        {b && <SpotlightTeam team={b} />}
+        {b && <SpotlightTeam team={b} favorite={isFav(b)} />}
       </div>
     </a>
   )
 }
 
-export default function HotSection({ events, now }: { events: ScheduleEvent[]; now: number }) {
+export default function HotSection({
+  events,
+  now,
+  favorites = [],
+}: {
+  events: ScheduleEvent[]
+  now: number
+  favorites?: readonly string[]
+}) {
   const [first, ...rest] = events
   return (
     <section
@@ -98,8 +125,10 @@ export default function HotSection({ events, now }: { events: ScheduleEvent[]; n
       </h2>
       {first ? (
         <>
-          <Spotlight event={first} now={now} />
-          {rest.length > 0 && <MatchList events={rest} now={now} showLeague grid />}
+          <Spotlight event={first} now={now} favorites={favorites} />
+          {rest.length > 0 && (
+            <MatchList events={rest} now={now} showLeague grid favorites={favorites} />
+          )}
         </>
       ) : (
         <p className="rounded-lg border border-dashed border-zinc-800 py-4 text-center text-sm text-zinc-500">

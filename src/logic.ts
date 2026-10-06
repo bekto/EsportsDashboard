@@ -3,10 +3,14 @@ import type { DisplayStatus, League, ScheduleEvent } from './api'
 export const HOT_MIN_SCORE = 30
 export const HOT_LIMIT = 8
 export const HOT_WINDOW_MS = 7 * 24 * 3600_000
+// Enough to lift any match with a favorite team to the entry threshold on its own.
+export const FAVORITE_BONUS = 30
 
 export interface Prefs {
   hidden: string[]
   order: string[]
+  /** Team codes marked as favorites; their matches score higher for HOT. */
+  favorites: string[]
 }
 
 export interface Section {
@@ -58,7 +62,7 @@ export function recentResults(events: ScheduleEvent[], n = 5): ScheduleEvent[] {
     .slice(0, n)
 }
 
-export function hotScore(e: ScheduleEvent, _nowMs: number): number {
+export function hotScore(e: ScheduleEvent, _nowMs: number, favorites: readonly string[] = []): number {
   const block = e.blockName.toLowerCase()
   let score = HOT_LEAGUES[e.league.slug] ?? 0
   if (BRACKET_WORDS.some((w) => block.includes(w))) score += 15
@@ -67,6 +71,9 @@ export function hotScore(e: ScheduleEvent, _nowMs: number): number {
   if (count === 5) score += 10
   else if (count === 3) score += 5
   if (e.match.teams.some((t) => t.code === 'TBD')) score -= 20
+  if (favorites.length > 0 && e.match.teams.some((t) => favorites.includes(t.code))) {
+    score += FAVORITE_BONUS
+  }
   const [a, b] = e.match.teams
   if (
     a?.record &&
@@ -84,7 +91,11 @@ export function hotScore(e: ScheduleEvent, _nowMs: number): number {
   return score
 }
 
-export function hotMatches(events: ScheduleEvent[], nowMs: number): ScheduleEvent[] {
+export function hotMatches(
+  events: ScheduleEvent[],
+  nowMs: number,
+  favorites: readonly string[] = [],
+): ScheduleEvent[] {
   const deadline = nowMs + HOT_WINDOW_MS
   const picked = events
     .filter(
@@ -92,7 +103,7 @@ export function hotMatches(events: ScheduleEvent[], nowMs: number): ScheduleEven
         e.state === 'inProgress' ||
         (e.state === 'unstarted' && Date.parse(e.startTime) <= deadline),
     )
-    .map((e) => ({ e, score: hotScore(e, nowMs) }))
+    .map((e) => ({ e, score: hotScore(e, nowMs, favorites) }))
     .filter((x) => x.score >= HOT_MIN_SCORE)
     .sort((a, b) => b.score - a.score)
     .slice(0, HOT_LIMIT)
@@ -161,4 +172,22 @@ export function allLeagueSlugsWithEvents(
       const l = leagueBySlug.get(slug)
       return { slug, name: l?.name ?? groups.get(slug)!.name, image: l?.image ?? null }
     })
+}
+
+export interface TeamOption {
+  code: string
+  name: string
+  image: string
+}
+
+/** Every real team appearing in the given events, deduped by code and sorted by name. */
+export function allTeamsWithEvents(events: ScheduleEvent[]): TeamOption[] {
+  const byCode = new Map<string, TeamOption>()
+  for (const e of events) {
+    for (const t of e.match.teams) {
+      if (!t.code || t.code === 'TBD' || byCode.has(t.code)) continue
+      byCode.set(t.code, { code: t.code, name: t.name, image: t.image })
+    }
+  }
+  return [...byCode.values()].sort((a, b) => a.name.localeCompare(b.name))
 }

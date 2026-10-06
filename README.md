@@ -1,6 +1,6 @@
 # LoL Esports Dashboard
 
-Static dashboard of upcoming/live League of Legends esports matches: a HOT section with the best matches of the next 7 days plus one section per active league. Times are shown in your local timezone. Data comes straight from the lolesports API in the browser and is cached in `localStorage`.
+Static dashboard of upcoming/live League of Legends esports matches: a HOT section with the best matches of the next 7 days plus one section per active league. Times are shown in your local timezone. Data comes straight from the lolesports API in the browser and is cached in `localStorage`. You can mark favorite teams to give their matches a boost in HOT and keep them starred across the board.
 
 ```sh
 npm i

@@ -2,15 +2,19 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Prefs } from './logic'
 
 const KEY = 'lolDash.prefs.v1'
-const DEFAULT_PREFS: Prefs = { hidden: [], order: [] }
+const DEFAULT_PREFS: Prefs = { hidden: [], order: [], favorites: [] }
 
 function readPrefs(): Prefs {
   try {
     const raw = localStorage.getItem(KEY)
     if (!raw) return DEFAULT_PREFS
-    const p = JSON.parse(raw) as Prefs
+    const p = JSON.parse(raw) as Partial<Prefs>
     if (!Array.isArray(p?.hidden) || !Array.isArray(p?.order)) return DEFAULT_PREFS
-    return { hidden: p.hidden, order: p.order }
+    return {
+      hidden: p.hidden,
+      order: p.order,
+      favorites: Array.isArray(p.favorites) ? p.favorites : [],
+    }
   } catch {
     return DEFAULT_PREFS
   }
@@ -28,11 +32,16 @@ export function usePrefs() {
   }, [prefs])
 
   const hide = useCallback((slug: string) => {
-    setPrefs((p) => ({ hidden: p.hidden.includes(slug) ? p.hidden : [...p.hidden, slug], order: p.order.filter((s) => s !== slug) }))
+    setPrefs((p) => ({
+      ...p,
+      hidden: p.hidden.includes(slug) ? p.hidden : [...p.hidden, slug],
+      order: p.order.filter((s) => s !== slug),
+    }))
   }, [])
 
   const unhide = useCallback((slug: string) => {
     setPrefs((p) => ({
+      ...p,
       hidden: p.hidden.filter((s) => s !== slug),
       order: p.order.length && !p.order.includes(slug) ? [...p.order, slug] : p.order,
     }))
@@ -51,5 +60,14 @@ export function usePrefs() {
 
   const reset = useCallback(() => setPrefs(DEFAULT_PREFS), [])
 
-  return { prefs, hide, unhide, move, reset }
+  const toggleFavorite = useCallback((code: string) => {
+    setPrefs((p) => ({
+      ...p,
+      favorites: p.favorites.includes(code)
+        ? p.favorites.filter((c) => c !== code)
+        : [...p.favorites, code],
+    }))
+  }, [])
+
+  return { prefs, hide, unhide, move, reset, toggleFavorite }
 }

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { DisplayStatus, League, MatchState, ScheduleEvent, Team } from './api'
 import {
+  FAVORITE_BONUS,
   HOT_LIMIT,
   allLeagueSlugsWithEvents,
+  allTeamsWithEvents,
   hotMatches,
   hotScore,
   leagueSections,
@@ -116,6 +118,13 @@ describe('hotScore', () => {
     const e = event({ slug: 'lck', block: 'Regular Season', count: 3 })
     expect(hotScore({ ...e, state: 'inProgress' }, NOW)).toBe(55)
   })
+
+  it('adds the favorite bonus once when any team is a favorite', () => {
+    const e = event({ teams: [team('AAA'), team('BBB')] })
+    expect(hotScore(e, NOW, ['AAA'])).toBe(hotScore(e, NOW) + FAVORITE_BONUS)
+    expect(hotScore(e, NOW, ['AAA', 'BBB'])).toBe(hotScore(e, NOW) + FAVORITE_BONUS)
+    expect(hotScore(e, NOW, ['CCC'])).toBe(hotScore(e, NOW))
+  })
 })
 
 describe('hotMatches', () => {
@@ -134,6 +143,13 @@ describe('hotMatches', () => {
       event({ id: `m${i}`, slug: 'worlds', block: 'Playoffs', count: 5, start: iso(i + 1) }),
     )
     expect(hotMatches(many, NOW)).toHaveLength(HOT_LIMIT)
+  })
+
+  it('lifts a favorite team match into HOT', () => {
+    const cold = event({ id: 'cold', slug: 'nacl', start: iso(24), teams: [team('AAA'), team('BBB')] })
+    const filler = event({ id: 'hot1', slug: 'worlds', block: 'Playoffs', count: 5, start: iso(2) })
+    expect(ids(hotMatches([cold, filler], NOW))).toEqual(['hot1'])
+    expect(ids(hotMatches([cold, filler], NOW, ['BBB']))).toEqual(['hot1', 'cold'])
   })
 })
 
@@ -154,14 +170,14 @@ describe('leagueSections', () => {
   ]
 
   it('honors prefs.order first, then default ranking; drops hidden and completed-only leagues', () => {
-    const sections = leagueSections(leagues, events, { hidden: ['lck'], order: ['lec'] })
+    const sections = leagueSections(leagues, events, { hidden: ['lck'], order: ['lec'], favorites: [] })
     expect(sections.map((s) => s.slug)).toEqual(['lec', 'worlds', 'nacl'])
     expect(sections[1].upcoming.map((e) => e.startTime)).toEqual([iso(2)])
     expect(sections[1].recent).toEqual([])
   })
 
   it('falls back to displayPriority status rank then position', () => {
-    const sections = leagueSections(leagues, events, { hidden: [], order: [] })
+    const sections = leagueSections(leagues, events, { hidden: [], order: [], favorites: [] })
     expect(sections.map((s) => s.slug)).toEqual(['worlds', 'lec', 'nacl', 'lck'])
   })
 
@@ -169,6 +185,7 @@ describe('leagueSections', () => {
     const sections = leagueSections(leagues, [...events, event({ slug: 'mystery', name: 'Mystery Cup' })], {
       hidden: [],
       order: [],
+      favorites: [],
     })
     expect(sections.map((s) => s.slug)).toEqual(['worlds', 'lec', 'nacl', 'lck', 'mystery'])
     expect(sections[4]).toMatchObject({ name: 'Mystery Cup', region: '', image: null })
@@ -191,6 +208,19 @@ describe('allLeagueSlugsWithEvents', () => {
       { slug: 'nacl', name: 'NACL', image: 'https://img/nacl' },
       { slug: 'cblol-brazil', name: 'CBLOL', image: 'https://img/cblol-brazil' },
       { slug: 'mystery', name: 'Mystery Cup', image: null },
+    ])
+  })
+})
+
+describe('allTeamsWithEvents', () => {
+  it('dedupes by code, skips TBD, and sorts by name', () => {
+    const events = [
+      event({ teams: [team('ZZZ'), team('TBD')] }),
+      event({ teams: [team('AAA'), team('ZZZ')] }),
+    ]
+    expect(allTeamsWithEvents(events)).toEqual([
+      { code: 'AAA', name: 'AAA', image: '' },
+      { code: 'ZZZ', name: 'ZZZ', image: '' },
     ])
   })
 })
