@@ -113,11 +113,7 @@ export default function App() {
         Skip to content
       </a>
       <p className="sr-only" role="status" aria-live="polite">
-        {loading
-          ? 'Refreshing match data'
-          : liveCount > 0
-            ? `${liveCount} match${liveCount === 1 ? '' : 'es'} live`
-            : ''}
+        {liveCount > 0 ? `${liveCount} match${liveCount === 1 ? '' : 'es'} live` : ''}
       </p>
       <Header
         fetchedAt={fetchedAt}
