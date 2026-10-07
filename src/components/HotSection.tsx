@@ -25,10 +25,12 @@ function Spotlight({
   event,
   now,
   favorites,
+  watchUrls,
 }: {
   event: ScheduleEvent
   now: number
   favorites: readonly string[]
+  watchUrls: Record<string, string>
 }) {
   const live = event.state === 'inProgress'
   const startMs = Date.parse(event.startTime)
@@ -37,7 +39,11 @@ function Spotlight({
   const hasFav = (a && isFav(a)) || (b && isFav(b))
   return (
     <a
-      href={live ? `https://lolesports.com/live/${event.league.slug}` : 'https://lolesports.com/schedule'}
+      href={
+        live
+          ? watchUrls[event.league.slug] ?? `https://lolesports.com/live/${event.league.slug}`
+          : `https://lolesports.com/schedule?leagues=${event.league.slug}`
+      }
       target="_blank"
       rel="noreferrer"
       title={`${a?.name ?? 'TBD'} vs ${b?.name ?? 'TBD'} · ${formatLocal(startMs)}`}
@@ -108,10 +114,12 @@ export default function HotSection({
   events,
   now,
   favorites = [],
+  watchUrls = {},
 }: {
   events: ScheduleEvent[]
   now: number
   favorites?: readonly string[]
+  watchUrls?: Record<string, string>
 }) {
   const [first, ...rest] = events
   return (
@@ -125,9 +133,9 @@ export default function HotSection({
       </h2>
       {first ? (
         <>
-          <Spotlight event={first} now={now} favorites={favorites} />
+          <Spotlight event={first} now={now} favorites={favorites} watchUrls={watchUrls} />
           {rest.length > 0 && (
-            <MatchList events={rest} now={now} showLeague grid favorites={favorites} />
+            <MatchList events={rest} now={now} showLeague grid favorites={favorites} watchUrls={watchUrls} />
           )}
         </>
       ) : (

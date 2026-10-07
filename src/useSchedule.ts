@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchLeagues, fetchSchedule, fetchSnapshot } from './api'
-import type { ScheduleData } from './api'
+import { fetchLeagues, fetchLive, fetchSchedule, fetchSnapshot } from './api'
+import type { LiveEvent, ScheduleData } from './api'
 
 const KEY = 'lolDash.data.v1'
 const TTL_MS = 5 * 60_000
@@ -8,15 +8,20 @@ const FAST_MS = 60_000
 const SLOW_MS = 5 * 60_000
 const SOON_MS = 15 * 60_000
 
-type Cache = ScheduleData
+type Cache = ScheduleData & { live: LiveEvent[] }
 
 function readCache(): Cache | null {
   try {
     const raw = localStorage.getItem(KEY)
     if (!raw) return null
-    const c = JSON.parse(raw) as Cache
+    const c = JSON.parse(raw) as Partial<Cache>
     if (typeof c?.fetchedAt !== 'number' || !Array.isArray(c.leagues) || !Array.isArray(c.events)) return null
-    return c
+    return {
+      fetchedAt: c.fetchedAt,
+      leagues: c.leagues,
+      events: c.events,
+      live: Array.isArray(c.live) ? c.live : [],
+    }
   } catch {
     return null
   }
@@ -38,8 +43,12 @@ export function useSchedule() {
     inFlight.current = true
     setLoading(true)
     try {
-      const [leagues, events] = await Promise.all([fetchLeagues(), fetchSchedule()])
-      const next = { fetchedAt: Date.now(), leagues, events }
+      const [leagues, events, live] = await Promise.all([
+        fetchLeagues(),
+        fetchSchedule(),
+        fetchLive(),
+      ])
+      const next = { fetchedAt: Date.now(), leagues, events, live }
       try {
         localStorage.setItem(KEY, JSON.stringify(next))
       } catch {
@@ -63,8 +72,9 @@ export function useSchedule() {
     let cancelled = false
     void fetchSnapshot().then((snap) => {
       if (cancelled || !snap || dataRef.current) return
-      dataRef.current = snap
-      setData(snap)
+      const hydrated = { ...snap, live: [] }
+      dataRef.current = hydrated
+      setData(hydrated)
     })
     return () => {
       cancelled = true
@@ -111,6 +121,7 @@ export function useSchedule() {
   return {
     leagues: data?.leagues ?? [],
     events: data?.events ?? [],
+    live: data?.live ?? [],
     fetchedAt: data?.fetchedAt ?? null,
     loading,
     error,

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { allLeagueSlugsWithEvents, allTeamsWithEvents, hotMatches, leagueSections } from './logic'
+import { pickStream, streamUrl } from './api'
 import { usePrefs } from './usePrefs'
 import { useSchedule } from './useSchedule'
 import { ago, useNow } from './time'
@@ -34,7 +35,7 @@ function RetryButton({ onClick }: { onClick: () => void }) {
 }
 
 export default function App() {
-  const { leagues, events, fetchedAt, loading, error, refresh } = useSchedule()
+  const { leagues, events, live, fetchedAt, loading, error, refresh } = useSchedule()
   const { prefs, hide, unhide, move, reset, toggleFavorite } = usePrefs()
   const now = useNow()
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -43,6 +44,15 @@ export default function App() {
   const sections = useMemo(() => leagueSections(leagues, events, prefs), [leagues, events, prefs])
   const allLeagues = useMemo(() => allLeagueSlugsWithEvents(leagues, events), [leagues, events])
   const allTeams = useMemo(() => allTeamsWithEvents(events), [events])
+  const watchUrls = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const ev of live) {
+      const stream = pickStream(ev.streams)
+      const url = stream ? streamUrl(stream) : null
+      if (url) map[ev.league.slug] = url
+    }
+    return map
+  }, [live])
   const visibleOrder = sections.map((s) => s.slug)
   const liveCount = events.filter((e) => e.state === 'inProgress').length
   const nav = useMemo(
@@ -110,7 +120,7 @@ export default function App() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            <HotSection events={hot} now={now} favorites={prefs.favorites} />
+            <HotSection events={hot} now={now} favorites={prefs.favorites} watchUrls={watchUrls} />
             {sections.length > 0 ? (
               <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {sections.map((section) => (
@@ -119,6 +129,7 @@ export default function App() {
                     section={section}
                     now={now}
                     favorites={prefs.favorites}
+                    watchUrls={watchUrls}
                   />
                 ))}
               </div>

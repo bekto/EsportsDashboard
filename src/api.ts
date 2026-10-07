@@ -180,6 +180,69 @@ export interface ScheduleData {
   events: ScheduleEvent[]
 }
 
+export interface LiveStream {
+  parameter: string
+  locale: string
+  provider: string
+}
+
+export interface LiveEvent {
+  league: { slug: string }
+  streams: LiveStream[]
+}
+
+function parseStream(v: unknown): LiveStream | null {
+  if (!isObj(v) || !isStr(v.parameter) || !isStr(v.provider)) return null
+  return { parameter: v.parameter, provider: v.provider, locale: isStr(v.locale) ? v.locale : '' }
+}
+
+/**
+ * Currently live broadcasts, used only to build "watch" links. Supplementary,
+ * so any failure degrades to an empty list rather than failing a refresh.
+ */
+export async function fetchLive(): Promise<LiveEvent[]> {
+  try {
+    const body = await get('getLive')
+    if (!isObj(body) || !isObj(body.data) || !isObj(body.data.schedule)) return []
+    const raw = body.data.schedule.events
+    if (!Array.isArray(raw)) return []
+    const out: LiveEvent[] = []
+    for (const e of raw) {
+      if (!isObj(e) || !isObj(e.league) || !isStr(e.league.slug)) continue
+      const streams = Array.isArray(e.streams)
+        ? e.streams.map(parseStream).filter((s): s is LiveStream => s !== null)
+        : []
+      if (streams.length > 0) out.push({ league: { slug: e.league.slug }, streams })
+    }
+    return out
+  } catch {
+    return []
+  }
+}
+
+const PROVIDER_URLS: Record<string, (channel: string) => string> = {
+  twitch: (c) => `https://www.twitch.tv/${c}`,
+  youtube: (c) => `https://www.youtube.com/${c}`,
+  afreeca: (c) => `https://play.afreecatv.com/${c}`,
+  afreecatv: (c) => `https://play.afreecatv.com/${c}`,
+}
+
+/** A watchable URL for a stream, or null when the provider isn't recognized. */
+export function streamUrl(stream: LiveStream): string | null {
+  const make = PROVIDER_URLS[stream.provider.toLowerCase()]
+  return make ? make(encodeURIComponent(stream.parameter)) : null
+}
+
+/** Prefer an English broadcast, then Twitch, then whatever is available. */
+export function pickStream(streams: LiveStream[]): LiveStream | null {
+  if (streams.length === 0) return null
+  return (
+    streams.find((s) => s.locale.toLowerCase().startsWith('en')) ??
+    streams.find((s) => s.provider.toLowerCase() === 'twitch') ??
+    streams[0]
+  )
+}
+
 /**
  * Last-known-good dataset baked into the build (see scripts/snapshot.mjs).
  * Best-effort: returns null when absent or malformed, so callers can ignore it.

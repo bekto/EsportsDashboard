@@ -98,6 +98,7 @@ export default function MatchCard({
   showLeague = false,
   showDay = false,
   favorites = [],
+  watchUrls = {},
 }: {
   event: ScheduleEvent
   now: number
@@ -105,13 +106,15 @@ export default function MatchCard({
   /** Day label inside the card, for lists that have no day dividers */
   showDay?: boolean
   favorites?: readonly string[]
+  /** league slug → direct stream URL for currently live broadcasts */
+  watchUrls?: Record<string, string>
 }) {
   const live = event.state === 'inProgress'
   const completed = event.state === 'completed'
   const startMs = new Date(event.startTime).getTime()
   const href = live
-    ? `https://lolesports.com/live/${event.league.slug}`
-    : 'https://lolesports.com/schedule'
+    ? watchUrls[event.league.slug] ?? `https://lolesports.com/live/${event.league.slug}`
+    : `https://lolesports.com/schedule?leagues=${event.league.slug}`
   const [a, b] = event.match.teams
   const aWon = a?.result?.outcome === 'win'
   const bWon = b?.result?.outcome === 'win'
@@ -215,6 +218,7 @@ export function MatchList({
   showLeague = false,
   grid = false,
   favorites = [],
+  watchUrls = {},
 }: {
   events: ScheduleEvent[]
   now: number
@@ -222,6 +226,7 @@ export function MatchList({
   /** 2-column grid on lg; day dividers would break the rows, so each card shows its own day */
   grid?: boolean
   favorites?: readonly string[]
+  watchUrls?: Record<string, string>
 }) {
   if (grid) {
     return (
@@ -234,6 +239,7 @@ export function MatchList({
             showLeague={showLeague}
             showDay
             favorites={favorites}
+            watchUrls={watchUrls}
           />
         ))}
       </div>
@@ -254,7 +260,13 @@ export function MatchList({
                 <span className="h-px flex-1 bg-zinc-800" />
               </div>
             )}
-            <MatchCard event={event} now={now} showLeague={showLeague} favorites={favorites} />
+            <MatchCard
+              event={event}
+              now={now}
+              showLeague={showLeague}
+              favorites={favorites}
+              watchUrls={watchUrls}
+            />
           </Fragment>
         )
       })}
