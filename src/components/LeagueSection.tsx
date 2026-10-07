@@ -17,6 +17,7 @@ export default function LeagueSection({
 }) {
   const [showAll, setShowAll] = useState(false)
   const [recentOpen, setRecentOpen] = useState(false)
+  const [standingsOpen, setStandingsOpen] = useState(false)
   const visible = showAll ? section.upcoming : section.upcoming.slice(0, 6)
   const live = section.upcoming.some((e) => e.state === 'inProgress')
 
@@ -103,6 +104,60 @@ export default function LeagueSection({
                 spoilerFree={spoilerFree}
               />
             </div>
+          )}
+        </div>
+      )}
+
+      {section.standings.length > 1 && (
+        <div className="mt-3 border-t border-zinc-800 pt-2">
+          <button
+            type="button"
+            onClick={() => setStandingsOpen((v) => !v)}
+            aria-expanded={standingsOpen}
+            className="flex w-full items-center gap-1 text-xs font-medium text-zinc-400 hover:text-zinc-200"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className={`h-3.5 w-3.5 transition-transform ${standingsOpen ? 'rotate-90' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m9 6 6 6-6 6" />
+            </svg>
+            Standings
+            <span className="ml-auto font-normal text-zinc-600 tabular-nums">
+              {section.standings.length}
+            </span>
+          </button>
+          {standingsOpen && (
+            <ol className="mt-2 flex flex-col gap-0.5 text-xs">
+              {section.standings.slice(0, 10).map((s, i) => (
+                <li key={s.code} className="flex items-center gap-2">
+                  <span className="w-4 shrink-0 text-right text-zinc-500 tabular-nums">{i + 1}</span>
+                  {s.image ? (
+                    <img
+                      src={s.image}
+                      alt=""
+                      loading="lazy"
+                      className="h-4 w-4 shrink-0 object-contain"
+                    />
+                  ) : (
+                    <span className="h-4 w-4 shrink-0 rounded bg-zinc-800" />
+                  )}
+                  <span className="min-w-0 flex-1 truncate text-zinc-300">{s.code}</span>
+                  <span className="shrink-0 text-zinc-500 tabular-nums">
+                    {s.wins}-{s.losses}
+                  </span>
+                  <span className="w-9 shrink-0 text-right text-zinc-400 tabular-nums">
+                    {Math.round(s.winrate * 100)}%
+                  </span>
+                </li>
+              ))}
+            </ol>
           )}
         </div>
       )}

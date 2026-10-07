@@ -22,6 +22,16 @@ export interface Section {
   image: string | null
   upcoming: ScheduleEvent[]
   recent: ScheduleEvent[]
+  standings: Standing[]
+}
+
+export interface Standing {
+  code: string
+  name: string
+  image: string
+  wins: number
+  losses: number
+  winrate: number
 }
 
 const HOT_LEAGUES: Record<string, number> = {
@@ -158,8 +168,38 @@ export function leagueSections(leagues: League[], events: ScheduleEvent[], prefs
       image: l?.image ?? null,
       upcoming: sortUpcoming(g.events),
       recent: recentResults(g.events),
+      standings: standingsForEvents(g.events),
     }
   })
+}
+
+/**
+ * Approximate league table from the season `team.record` carried on schedule
+ * events. Keeps each team's most-played record, ranks by win rate then wins.
+ */
+export function standingsForEvents(events: ScheduleEvent[]): Standing[] {
+  const byCode = new Map<string, Standing>()
+  for (const e of events) {
+    for (const t of e.match.teams) {
+      if (!t.code || t.code === 'TBD' || !t.record) continue
+      const games = t.record.wins + t.record.losses
+      if (games < 1) continue
+      const prev = byCode.get(t.code)
+      if (!prev || games > prev.wins + prev.losses) {
+        byCode.set(t.code, {
+          code: t.code,
+          name: t.name,
+          image: t.image,
+          wins: t.record.wins,
+          losses: t.record.losses,
+          winrate: t.record.wins / games,
+        })
+      }
+    }
+  }
+  return [...byCode.values()].sort(
+    (a, b) => b.winrate - a.winrate || b.wins - a.wins || a.name.localeCompare(b.name),
+  )
 }
 
 export function allLeagueSlugsWithEvents(
