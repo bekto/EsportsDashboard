@@ -87,43 +87,43 @@ describe('hotScore', () => {
     const worldsFinal = event({ slug: 'worlds', block: 'Finals', count: 5 })
     const lckBo3 = event({ slug: 'lck', block: 'Regular Season', count: 3 })
     const naclBo1 = event({ slug: 'nacl', block: 'Regular Season', count: 1 })
-    expect(hotScore(worldsFinal, NOW)).toBe(85)
-    expect(hotScore(lckBo3, NOW)).toBe(40)
-    expect(hotScore(naclBo1, NOW)).toBe(0)
-    expect(hotScore(worldsFinal, NOW)).toBeGreaterThan(hotScore(lckBo3, NOW))
-    expect(hotScore(lckBo3, NOW)).toBeGreaterThan(hotScore(naclBo1, NOW))
+    expect(hotScore(worldsFinal)).toBe(85)
+    expect(hotScore(lckBo3)).toBe(40)
+    expect(hotScore(naclBo1)).toBe(0)
+    expect(hotScore(worldsFinal)).toBeGreaterThan(hotScore(lckBo3))
+    expect(hotScore(lckBo3)).toBeGreaterThan(hotScore(naclBo1))
   })
 
   it('penalizes TBD teams by 20', () => {
     const full = event({ slug: 'worlds', block: 'Finals', count: 5 })
     const tbd = event({ slug: 'worlds', block: 'Finals', count: 5, teams: [team('TBD'), team('BBB')] })
-    expect(hotScore(tbd, NOW)).toBe(hotScore(full, NOW) - 20)
+    expect(hotScore(tbd)).toBe(hotScore(full) - 20)
   })
 
   it('scores "Semifinals" as bracket (+15), never the +25 final bonus', () => {
     const semi = event({ slug: 'worlds', block: 'Semifinals', count: 5 })
     const finals = event({ slug: 'worlds', block: 'Finals', count: 5 })
-    expect(hotScore(semi, NOW)).toBe(75)
-    expect(hotScore(finals, NOW) - hotScore(semi, NOW)).toBe(10)
-    expect(hotScore(event({ block: 'Lower Bracket Final' }), NOW)).toBe(15)
+    expect(hotScore(semi)).toBe(75)
+    expect(hotScore(finals) - hotScore(semi)).toBe(10)
+    expect(hotScore(event({ block: 'Lower Bracket Final' }))).toBe(15)
   })
 
   it('adds the form bonus only for close winrates with games played', () => {
-    expect(hotScore(event({ teams: [team('A', 10, 5), team('B', 9, 6)] }), NOW)).toBe(10)
-    expect(hotScore(event({ teams: [team('A', 10, 0), team('B', 0, 10)] }), NOW)).toBe(0)
-    expect(hotScore(event({ teams: [team('A'), team('B')] }), NOW)).toBe(0)
+    expect(hotScore(event({ teams: [team('A', 10, 5), team('B', 9, 6)] }))).toBe(10)
+    expect(hotScore(event({ teams: [team('A', 10, 0), team('B', 0, 10)] }))).toBe(0)
+    expect(hotScore(event({ teams: [team('A'), team('B')] }))).toBe(0)
   })
 
   it('adds 15 for inProgress', () => {
     const e = event({ slug: 'lck', block: 'Regular Season', count: 3 })
-    expect(hotScore({ ...e, state: 'inProgress' }, NOW)).toBe(55)
+    expect(hotScore({ ...e, state: 'inProgress' })).toBe(55)
   })
 
   it('adds the favorite bonus once when any team is a favorite', () => {
     const e = event({ teams: [team('AAA'), team('BBB')] })
-    expect(hotScore(e, NOW, ['AAA'])).toBe(hotScore(e, NOW) + FAVORITE_BONUS)
-    expect(hotScore(e, NOW, ['AAA', 'BBB'])).toBe(hotScore(e, NOW) + FAVORITE_BONUS)
-    expect(hotScore(e, NOW, ['CCC'])).toBe(hotScore(e, NOW))
+    expect(hotScore(e, ['AAA'])).toBe(hotScore(e) + FAVORITE_BONUS)
+    expect(hotScore(e, ['AAA', 'BBB'])).toBe(hotScore(e) + FAVORITE_BONUS)
+    expect(hotScore(e, ['CCC'])).toBe(hotScore(e))
   })
 })
 

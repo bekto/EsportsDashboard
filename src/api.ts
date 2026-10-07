@@ -40,37 +40,136 @@ export interface ScheduleEvent {
 
 export const https = (url: string) => url.replace(/^http:/, 'https:')
 
-async function get<T>(path: string, params: Record<string, string> = {}): Promise<T> {
+// --- Response parsing ------------------------------------------------------
+// The lolesports API is unofficial and unversioned, so validate what we read
+// instead of blindly casting. Envelope failures throw; individually malformed
+// events are skipped so one bad row can't blank the whole dashboard.
+
+const DISPLAY_STATUSES: ReadonlySet<string> = new Set([
+  'force_selected',
+  'selected',
+  'not_selected',
+  'hidden',
+])
+const MATCH_STATES: ReadonlySet<string> = new Set(['unstarted', 'inProgress', 'completed'])
+
+const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null
+const isStr = (v: unknown): v is string => typeof v === 'string'
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
+
+function fail(what: string): never {
+  throw new Error(`Unexpected API response: ${what}`)
+}
+
+function parseLeague(v: unknown): League | null {
+  if (!isObj(v) || !isStr(v.id) || !isStr(v.slug) || !isStr(v.name)) return null
+  const dp = v.displayPriority
+  if (!isObj(dp) || !isNum(dp.position) || !isStr(dp.status) || !DISPLAY_STATUSES.has(dp.status)) {
+    return null
+  }
+  return {
+    id: v.id,
+    slug: v.slug,
+    name: v.name,
+    region: isStr(v.region) ? v.region : '',
+    image: isStr(v.image) ? https(v.image) : '',
+    priority: isNum(v.priority) ? v.priority : 0,
+    displayPriority: { position: dp.position, status: dp.status as DisplayStatus },
+  }
+}
+
+function parseRecord(v: unknown): { wins: number; losses: number } | null {
+  if (isObj(v) && isNum(v.wins) && isNum(v.losses)) return { wins: v.wins, losses: v.losses }
+  return null
+}
+
+function parseResult(v: unknown): { outcome: 'win' | 'loss' | null; gameWins: number } | null {
+  if (!isObj(v) || !isNum(v.gameWins)) return null
+  const outcome = v.outcome === 'win' || v.outcome === 'loss' ? v.outcome : null
+  return { outcome, gameWins: v.gameWins }
+}
+
+function parseTeam(v: unknown): Team | null {
+  if (!isObj(v) || !isStr(v.code) || !isStr(v.name)) return null
+  return {
+    name: v.name,
+    code: v.code,
+    image: isStr(v.image) ? https(v.image) : '',
+    result: parseResult(v.result),
+    record: parseRecord(v.record),
+  }
+}
+
+function parseEvent(v: unknown): ScheduleEvent | null {
+  if (!isObj(v) || v.type !== 'match' || !isStr(v.state) || !MATCH_STATES.has(v.state)) return null
+  if (!isStr(v.startTime) || !isObj(v.league) || !isStr(v.league.slug)) return null
+  const match = v.match
+  if (!isObj(match) || !isStr(match.id) || !Array.isArray(match.teams) || !isObj(match.strategy)) {
+    return null
+  }
+  const teams = match.teams.map(parseTeam)
+  if (teams.some((t) => t === null)) return null
+  return {
+    startTime: v.startTime,
+    state: v.state as MatchState,
+    type: 'match',
+    blockName: isStr(v.blockName) ? v.blockName : '',
+    league: { name: isStr(v.league.name) ? v.league.name : '', slug: v.league.slug },
+    match: {
+      id: match.id,
+      flags: Array.isArray(match.flags) ? match.flags.filter(isStr) : [],
+      teams: teams as Team[],
+      strategy: {
+        type: isStr(match.strategy.type) ? match.strategy.type : 'bestOf',
+        count: isNum(match.strategy.count) ? match.strategy.count : 1,
+      },
+    },
+  }
+}
+
+async function get(path: string, params: Record<string, string> = {}): Promise<unknown> {
   const qs = new URLSearchParams({ hl: 'en-US', ...params })
   const res = await fetch(`${API}/${path}?${qs}`, { headers: { 'x-api-key': KEY } })
   if (!res.ok) throw new Error(`API ${res.status}`)
-  return (await res.json()) as T
+  return res.json()
 }
 
 export async function fetchLeagues(): Promise<League[]> {
-  const body = await get<{ data: { leagues: League[] } }>('getLeagues')
-  return body.data.leagues.map((l) => ({ ...l, image: https(l.image) }))
-}
-
-type RawEvent = Omit<ScheduleEvent, 'type'> & { type: string }
-type SchedulePage = {
-  data: { schedule: { pages: { older: string | null; newer: string | null }; events: RawEvent[] } }
+  const body = await get('getLeagues')
+  if (!isObj(body) || !isObj(body.data) || !Array.isArray(body.data.leagues)) {
+    fail('getLeagues')
+  }
+  return body.data.leagues.map(parseLeague).filter((l): l is League => l !== null)
 }
 
 export async function fetchSchedule(): Promise<ScheduleEvent[]> {
   const events: ScheduleEvent[] = []
   const seen = new Set<string>()
   let token: string | null = null
+  let skipped = 0
   for (let i = 0; i < MAX_PAGES; i++) {
-    const page: SchedulePage = await get<SchedulePage>('getSchedule', token ? { pageToken: token } : {})
-    for (const e of page.data.schedule.events) {
-      if (e.type !== 'match' || !e.match || seen.has(e.match.id)) continue
-      seen.add(e.match.id)
-      const teams = e.match.teams.map((t) => ({ ...t, image: https(t.image) }))
-      events.push({ ...e, type: 'match', match: { ...e.match, teams } })
+    const body = await get('getSchedule', token ? { pageToken: token } : {})
+    if (!isObj(body) || !isObj(body.data) || !isObj(body.data.schedule)) fail('getSchedule')
+    const schedule = body.data.schedule
+    if (!Array.isArray(schedule.events)) fail('getSchedule.events')
+    for (const raw of schedule.events) {
+      const event = parseEvent(raw)
+      if (!event) {
+        skipped++
+        continue
+      }
+      if (seen.has(event.match.id)) continue
+      seen.add(event.match.id)
+      events.push(event)
     }
-    token = page.data.schedule.pages.newer
+    const pages = schedule.pages
+    token = isObj(pages) && isStr(pages.newer) ? pages.newer : null
     if (!token) break
+    if (i === MAX_PAGES - 1) {
+      // More future events exist than we fetched: surface it instead of silently truncating.
+      console.warn(`lolesports: schedule truncated at ${MAX_PAGES} pages`)
+    }
   }
+  if (skipped > 0) console.warn(`lolesports: skipped ${skipped} malformed schedule event(s)`)
   return events
 }

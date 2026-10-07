@@ -62,7 +62,7 @@ export function recentResults(events: ScheduleEvent[], n = 5): ScheduleEvent[] {
     .slice(0, n)
 }
 
-export function hotScore(e: ScheduleEvent, _nowMs: number, favorites: readonly string[] = []): number {
+export function hotScore(e: ScheduleEvent, favorites: readonly string[] = []): number {
   const block = e.blockName.toLowerCase()
   let score = HOT_LEAGUES[e.league.slug] ?? 0
   if (BRACKET_WORDS.some((w) => block.includes(w))) score += 15
@@ -103,7 +103,7 @@ export function hotMatches(
         e.state === 'inProgress' ||
         (e.state === 'unstarted' && Date.parse(e.startTime) <= deadline),
     )
-    .map((e) => ({ e, score: hotScore(e, nowMs, favorites) }))
+    .map((e) => ({ e, score: hotScore(e, favorites) }))
     .filter((x) => x.score >= HOT_MIN_SCORE)
     .sort((a, b) => b.score - a.score)
     .slice(0, HOT_LIMIT)
