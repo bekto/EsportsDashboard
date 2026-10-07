@@ -95,7 +95,10 @@ export default function Header({
         </div>
       </div>
       {nav.length > 0 && (
-        <nav className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <nav
+          aria-label="League sections"
+          className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
           {nav.map((item) => (
             <a
               key={item.href}

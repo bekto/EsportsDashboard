@@ -106,6 +106,19 @@ export default function App() {
 
   return (
     <div className="min-h-screen text-zinc-100">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-md focus:bg-zinc-800 focus:px-3 focus:py-2 focus:text-sm"
+      >
+        Skip to content
+      </a>
+      <p className="sr-only" role="status" aria-live="polite">
+        {loading
+          ? 'Refreshing match data'
+          : liveCount > 0
+            ? `${liveCount} match${liveCount === 1 ? '' : 'es'} live`
+            : ''}
+      </p>
       <Header
         fetchedAt={fetchedAt}
         now={now}
@@ -117,7 +130,7 @@ export default function App() {
         onSettings={() => setSettingsOpen(true)}
       />
 
-      <main className="mx-auto max-w-7xl px-4 py-4">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-7xl px-4 py-4 focus:outline-none">
         <FilterBar
           query={query}
           onQuery={setQuery}

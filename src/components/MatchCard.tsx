@@ -188,7 +188,7 @@ export default function MatchCard({
         {event.blockName && <span className="truncate">{event.blockName}</span>}
         <span className="ml-auto flex shrink-0 items-center gap-1.5 whitespace-nowrap tabular-nums">
           {completed && formatTime(startMs)}
-          <ExternalIcon className="text-zinc-500 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
+          <ExternalIcon className="text-zinc-500 opacity-60 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
         </span>
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">

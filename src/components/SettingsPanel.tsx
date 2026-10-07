@@ -88,7 +88,7 @@ export default function SettingsPanel({
           {league.image && (
             <img
               src={league.image}
-              alt=""
+              alt={league.name}
               loading="lazy"
               onError={(e) => (e.currentTarget.style.display = 'none')}
               className="h-5 w-5 object-contain"
@@ -138,7 +138,7 @@ export default function SettingsPanel({
         {team.image ? (
           <img
             src={team.image}
-            alt=""
+            alt={team.name}
             loading="lazy"
             onError={(e) => (e.currentTarget.style.display = 'none')}
             className="h-5 w-5 shrink-0 object-contain"
