@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import type { Section } from '../logic'
-import { MatchList } from './MatchCard'
+import { MatchList, StarIcon } from './MatchCard'
+
+// Shared grid so the standings header and rows align: rank · team · W-L · win%
+const STANDINGS_COLS = 'grid grid-cols-[1.25rem_minmax(0,1fr)_auto_auto] items-center gap-x-2.5'
+const rankTone = (i: number) =>
+  i === 0 ? 'text-amber-300' : i === 1 ? 'text-zinc-300' : i === 2 ? 'text-orange-400' : 'text-zinc-500'
 
 export default function LeagueSection({
   section,
@@ -134,30 +139,64 @@ export default function LeagueSection({
             </span>
           </button>
           {standingsOpen && (
-            <ol className="mt-2 flex flex-col gap-0.5 text-xs">
-              {section.standings.slice(0, 10).map((s, i) => (
-                <li key={s.code} className="flex items-center gap-2">
-                  <span className="w-4 shrink-0 text-right text-zinc-500 tabular-nums">{i + 1}</span>
-                  {s.image ? (
-                    <img
-                      src={s.image}
-                      alt=""
-                      loading="lazy"
-                      className="h-4 w-4 shrink-0 object-contain"
-                    />
-                  ) : (
-                    <span className="h-4 w-4 shrink-0 rounded bg-zinc-800" />
-                  )}
-                  <span className="min-w-0 flex-1 truncate text-zinc-300">{s.code}</span>
-                  <span className="shrink-0 text-zinc-500 tabular-nums">
-                    {s.wins}-{s.losses}
-                  </span>
-                  <span className="w-9 shrink-0 text-right text-zinc-400 tabular-nums">
-                    {Math.round(s.winrate * 100)}%
-                  </span>
-                </li>
-              ))}
-            </ol>
+            <div className="mt-2">
+              <div
+                className={`${STANDINGS_COLS} border-b border-zinc-800 pb-1 text-[10px] font-semibold tracking-wide text-zinc-600 uppercase`}
+              >
+                <span className="text-right">#</span>
+                <span>Team</span>
+                <span>W-L</span>
+                <span className="text-right">Win%</span>
+              </div>
+              <ol className="mt-0.5 flex flex-col">
+                {section.standings.slice(0, 10).map((s, i) => {
+                  const pct = Math.round(s.winrate * 100)
+                  const fav = favorites.includes(s.code)
+                  return (
+                    <li key={s.code} className={`${STANDINGS_COLS} py-1`}>
+                      <span className={`text-right text-[11px] font-semibold tabular-nums ${rankTone(i)}`}>
+                        {i + 1}
+                      </span>
+                      <span className="min-w-0" title={s.name}>
+                        <span className="flex items-center gap-1.5">
+                          {s.image ? (
+                            <img
+                              src={s.image}
+                              alt=""
+                              loading="lazy"
+                              className="h-4 w-4 shrink-0 object-contain"
+                            />
+                          ) : (
+                            <span className="h-4 w-4 shrink-0 rounded bg-zinc-800" />
+                          )}
+                          <span
+                            className={`truncate text-xs font-medium ${fav ? 'text-amber-300' : 'text-zinc-200'}`}
+                          >
+                            {s.code}
+                          </span>
+                          {fav && <StarIcon className="h-2.5 w-2.5 shrink-0 text-amber-400" />}
+                        </span>
+                        <span
+                          className="mt-1 block h-1 overflow-hidden rounded-full bg-zinc-800"
+                          aria-hidden="true"
+                        >
+                          <span
+                            className={`block h-full rounded-full ${fav ? 'bg-amber-500/70' : 'bg-sky-500/70'}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </span>
+                      </span>
+                      <span className="text-[11px] text-zinc-400 tabular-nums">
+                        {s.wins}-{s.losses}
+                      </span>
+                      <span className="w-9 text-right text-[11px] font-semibold text-zinc-300 tabular-nums">
+                        {pct}%
+                      </span>
+                    </li>
+                  )
+                })}
+              </ol>
+            </div>
           )}
         </div>
       )}
