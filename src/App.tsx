@@ -1,5 +1,13 @@
 import { useMemo, useState } from 'react'
-import { allLeagueSlugsWithEvents, allTeamsWithEvents, hotMatches, leagueSections } from './logic'
+import {
+  allLeagueSlugsWithEvents,
+  allTeamsWithEvents,
+  filterMatches,
+  hotMatches,
+  leagueSections,
+  recentResults,
+  sortUpcoming,
+} from './logic'
 import { pickStream, streamUrl } from './api'
 import { usePrefs } from './usePrefs'
 import { useSchedule } from './useSchedule'
@@ -8,6 +16,8 @@ import Header from './components/Header'
 import HotSection from './components/HotSection'
 import LeagueSection from './components/LeagueSection'
 import SettingsPanel from './components/SettingsPanel'
+import FilterBar from './components/FilterBar'
+import { MatchList } from './components/MatchCard'
 
 function SkeletonCard() {
   return (
@@ -39,6 +49,19 @@ export default function App() {
   const { prefs, hide, unhide, move, reset, toggleFavorite } = usePrefs()
   const now = useNow()
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [followingOnly, setFollowingOnly] = useState(false)
+
+  const filtering = query.trim().length > 0 || followingOnly
+  const matched = useMemo(
+    () => (filtering ? filterMatches(events, query, followingOnly, prefs.favorites) : []),
+    [filtering, events, query, followingOnly, prefs.favorites],
+  )
+  const matchedUpcoming = useMemo(
+    () => sortUpcoming(matched.filter((e) => e.state !== 'completed')),
+    [matched],
+  )
+  const matchedRecent = useMemo(() => recentResults(matched, 20), [matched])
 
   const hot = useMemo(() => hotMatches(events, now, prefs.favorites), [events, now, prefs.favorites])
   const sections = useMemo(() => leagueSections(leagues, events, prefs), [leagues, events, prefs])
@@ -57,7 +80,7 @@ export default function App() {
   const liveCount = events.filter((e) => e.state === 'inProgress').length
   const nav = useMemo(
     () =>
-      sections.length === 0
+      filtering || sections.length === 0
         ? []
         : [
             {
@@ -73,7 +96,7 @@ export default function App() {
               live: s.upcoming.some((e) => e.state === 'inProgress'),
             })),
           ],
-    [sections, hot],
+    [filtering, sections, hot],
   )
 
   const noData = events.length === 0 && leagues.length === 0
@@ -91,6 +114,18 @@ export default function App() {
       />
 
       <main className="mx-auto max-w-7xl px-4 py-4">
+        <FilterBar
+          query={query}
+          onQuery={setQuery}
+          followingOnly={followingOnly}
+          onFollowing={setFollowingOnly}
+          onClear={() => {
+            setQuery('')
+            setFollowingOnly(false)
+          }}
+          count={matchedUpcoming.length + matchedRecent.length}
+        />
+
         {error && !noData && (
           <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-700 bg-amber-950/40 px-3 py-2 text-sm text-amber-200">
             <span className="min-w-0 truncate">
@@ -118,6 +153,51 @@ export default function App() {
               <SkeletonCard />
             </div>
           </div>
+        ) : filtering ? (
+          <section
+            id="results"
+            className="scroll-mt-28 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4"
+          >
+            <h2 className="mb-3 flex items-center gap-2 text-lg font-bold">
+              {followingOnly ? 'Following' : 'Search results'}
+              <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-xs font-normal text-zinc-400 tabular-nums">
+                {matchedUpcoming.length + matchedRecent.length}
+              </span>
+            </h2>
+            {matchedUpcoming.length === 0 && matchedRecent.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-zinc-800 py-8 text-center text-sm text-zinc-500">
+                {followingOnly
+                  ? 'No upcoming matches for your favorite teams. Star teams in ⚙ Settings.'
+                  : `No matches found for “${query.trim()}”.`}
+              </p>
+            ) : (
+              <>
+                {matchedUpcoming.length > 0 && (
+                  <MatchList
+                    events={matchedUpcoming}
+                    now={now}
+                    showLeague
+                    favorites={prefs.favorites}
+                    watchUrls={watchUrls}
+                  />
+                )}
+                {matchedRecent.length > 0 && (
+                  <div className="mt-4 border-t border-zinc-800 pt-3">
+                    <h3 className="mb-2 text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+                      Recent results
+                    </h3>
+                    <MatchList
+                      events={matchedRecent}
+                      now={now}
+                      showLeague
+                      favorites={prefs.favorites}
+                      watchUrls={watchUrls}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+          </section>
         ) : (
           <div className="flex flex-col gap-4">
             <HotSection events={hot} now={now} favorites={prefs.favorites} watchUrls={watchUrls} />

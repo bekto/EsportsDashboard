@@ -191,3 +191,30 @@ export function allTeamsWithEvents(events: ScheduleEvent[]): TeamOption[] {
   }
   return [...byCode.values()].sort((a, b) => a.name.localeCompare(b.name))
 }
+
+function matchesQuery(e: ScheduleEvent, q: string): boolean {
+  return (
+    e.league.name.toLowerCase().includes(q) ||
+    e.blockName.toLowerCase().includes(q) ||
+    e.match.teams.some((t) => t.code.toLowerCase().includes(q) || t.name.toLowerCase().includes(q))
+  )
+}
+
+/**
+ * Events to show in the Following/search results view: keep favorite-team
+ * matches when `favoritesOnly`, then apply the text query (team, league, stage).
+ */
+export function filterMatches(
+  events: ScheduleEvent[],
+  query: string,
+  favoritesOnly: boolean,
+  favorites: readonly string[],
+): ScheduleEvent[] {
+  const q = query.trim().toLowerCase()
+  const favSet = new Set(favorites)
+  return events.filter((e) => {
+    if (favoritesOnly && !e.match.teams.some((t) => favSet.has(t.code))) return false
+    if (q && !matchesQuery(e, q)) return false
+    return true
+  })
+}
