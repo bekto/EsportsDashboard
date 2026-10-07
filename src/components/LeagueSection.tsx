@@ -7,11 +7,13 @@ export default function LeagueSection({
   now,
   favorites = [],
   watchUrls = {},
+  spoilerFree = false,
 }: {
   section: Section
   now: number
   favorites?: readonly string[]
   watchUrls?: Record<string, string>
+  spoilerFree?: boolean
 }) {
   const [showAll, setShowAll] = useState(false)
   const [recentOpen, setRecentOpen] = useState(false)
@@ -44,7 +46,13 @@ export default function LeagueSection({
       </div>
 
       {visible.length > 0 ? (
-        <MatchList events={visible} now={now} favorites={favorites} watchUrls={watchUrls} />
+        <MatchList
+          events={visible}
+          now={now}
+          favorites={favorites}
+          watchUrls={watchUrls}
+          spoilerFree={spoilerFree}
+        />
       ) : (
         <p className="rounded-lg border border-dashed border-zinc-800 py-4 text-center text-sm text-zinc-500">
           No upcoming matches
@@ -87,7 +95,13 @@ export default function LeagueSection({
           </button>
           {recentOpen && (
             <div className="mt-2">
-              <MatchList events={section.recent} now={now} favorites={favorites} watchUrls={watchUrls} />
+              <MatchList
+                events={section.recent}
+                now={now}
+                favorites={favorites}
+                watchUrls={watchUrls}
+                spoilerFree={spoilerFree}
+              />
             </div>
           )}
         </div>

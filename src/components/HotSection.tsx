@@ -26,11 +26,13 @@ function Spotlight({
   now,
   favorites,
   watchUrls,
+  spoilerFree,
 }: {
   event: ScheduleEvent
   now: number
   favorites: readonly string[]
   watchUrls: Record<string, string>
+  spoilerFree: boolean
 }) {
   const live = event.state === 'inProgress'
   const startMs = Date.parse(event.startTime)
@@ -82,7 +84,7 @@ function Spotlight({
                 <span className="h-2 w-2 rounded-full bg-red-500 motion-safe:animate-pulse" />
                 LIVE
               </span>
-              {a?.result && b?.result && (
+              {!spoilerFree && a?.result && b?.result && (
                 <span className="mt-1 text-3xl font-bold tabular-nums sm:text-4xl">
                   {a.result.gameWins}
                   <span className="mx-2 text-zinc-600">–</span>
@@ -115,11 +117,13 @@ export default function HotSection({
   now,
   favorites = [],
   watchUrls = {},
+  spoilerFree = false,
 }: {
   events: ScheduleEvent[]
   now: number
   favorites?: readonly string[]
   watchUrls?: Record<string, string>
+  spoilerFree?: boolean
 }) {
   const [first, ...rest] = events
   return (
@@ -133,9 +137,23 @@ export default function HotSection({
       </h2>
       {first ? (
         <>
-          <Spotlight event={first} now={now} favorites={favorites} watchUrls={watchUrls} />
+          <Spotlight
+            event={first}
+            now={now}
+            favorites={favorites}
+            watchUrls={watchUrls}
+            spoilerFree={spoilerFree}
+          />
           {rest.length > 0 && (
-            <MatchList events={rest} now={now} showLeague grid favorites={favorites} watchUrls={watchUrls} />
+            <MatchList
+              events={rest}
+              now={now}
+              showLeague
+              grid
+              favorites={favorites}
+              watchUrls={watchUrls}
+              spoilerFree={spoilerFree}
+            />
           )}
         </>
       ) : (

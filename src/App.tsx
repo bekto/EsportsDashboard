@@ -46,7 +46,7 @@ function RetryButton({ onClick }: { onClick: () => void }) {
 
 export default function App() {
   const { leagues, events, live, fetchedAt, loading, error, refresh } = useSchedule()
-  const { prefs, hide, unhide, move, reset, toggleFavorite } = usePrefs()
+  const { prefs, hide, unhide, move, reset, toggleFavorite, toggleSpoilerFree } = usePrefs()
   const now = useNow()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -179,6 +179,7 @@ export default function App() {
                     showLeague
                     favorites={prefs.favorites}
                     watchUrls={watchUrls}
+                    spoilerFree={prefs.spoilerFree}
                   />
                 )}
                 {matchedRecent.length > 0 && (
@@ -192,6 +193,7 @@ export default function App() {
                       showLeague
                       favorites={prefs.favorites}
                       watchUrls={watchUrls}
+                      spoilerFree={prefs.spoilerFree}
                     />
                   </div>
                 )}
@@ -200,7 +202,13 @@ export default function App() {
           </section>
         ) : (
           <div className="flex flex-col gap-4">
-            <HotSection events={hot} now={now} favorites={prefs.favorites} watchUrls={watchUrls} />
+            <HotSection
+              events={hot}
+              now={now}
+              favorites={prefs.favorites}
+              watchUrls={watchUrls}
+              spoilerFree={prefs.spoilerFree}
+            />
             {sections.length > 0 ? (
               <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {sections.map((section) => (
@@ -210,6 +218,7 @@ export default function App() {
                     now={now}
                     favorites={prefs.favorites}
                     watchUrls={watchUrls}
+                    spoilerFree={prefs.spoilerFree}
                   />
                 ))}
               </div>
@@ -233,6 +242,7 @@ export default function App() {
         unhide={unhide}
         move={move}
         toggleFavorite={toggleFavorite}
+        toggleSpoilerFree={toggleSpoilerFree}
         reset={reset}
       />
     </div>

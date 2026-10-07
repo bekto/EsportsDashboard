@@ -59,17 +59,21 @@ function TeamSide({
   won,
   mirrored,
   favorite,
+  spoilerFree,
 }: {
   team: Team
   completed: boolean
   won: boolean
   mirrored: boolean
   favorite: boolean
+  spoilerFree: boolean
 }) {
   const codeClass = completed
-    ? won
-      ? 'font-bold text-white'
-      : 'text-zinc-500'
+    ? spoilerFree
+      ? 'text-zinc-300'
+      : won
+        ? 'font-bold text-white'
+        : 'text-zinc-500'
     : 'font-semibold text-zinc-100'
   return (
     <div className={`flex min-w-0 items-center gap-2 ${mirrored ? 'justify-end' : ''}`}>
@@ -92,6 +96,27 @@ function TeamSide({
   )
 }
 
+export function CompletedScore({
+  a,
+  b,
+  spoilerFree = false,
+}: {
+  a?: Team
+  b?: Team
+  spoilerFree?: boolean
+}) {
+  const aWon = a?.result?.outcome === 'win'
+  const bWon = b?.result?.outcome === 'win'
+  const tone = (won: boolean) => (spoilerFree ? 'text-zinc-300' : won ? 'text-white' : 'text-zinc-500')
+  return (
+    <span className="text-lg font-bold tabular-nums">
+      <span className={tone(Boolean(aWon))}>{a?.result?.gameWins ?? 0}</span>
+      <span className="mx-1 text-zinc-600">–</span>
+      <span className={tone(Boolean(bWon))}>{b?.result?.gameWins ?? 0}</span>
+    </span>
+  )
+}
+
 export default function MatchCard({
   event,
   now,
@@ -99,6 +124,7 @@ export default function MatchCard({
   showDay = false,
   favorites = [],
   watchUrls = {},
+  spoilerFree = false,
 }: {
   event: ScheduleEvent
   now: number
@@ -108,6 +134,8 @@ export default function MatchCard({
   favorites?: readonly string[]
   /** league slug → direct stream URL for currently live broadcasts */
   watchUrls?: Record<string, string>
+  /** Hide winners and series scores on completed/live cards */
+  spoilerFree?: boolean
 }) {
   const live = event.state === 'inProgress'
   const completed = event.state === 'completed'
@@ -165,7 +193,14 @@ export default function MatchCard({
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         {a && (
-          <TeamSide team={a} completed={completed} won={aWon} mirrored={false} favorite={isFav(a)} />
+          <TeamSide
+            team={a}
+            completed={completed}
+            won={aWon}
+            mirrored={false}
+            favorite={isFav(a)}
+            spoilerFree={spoilerFree}
+          />
         )}
         <div className="w-20 text-center">
           {live ? (
@@ -174,22 +209,26 @@ export default function MatchCard({
                 <span className="h-1.5 w-1.5 rounded-full bg-red-500 motion-safe:animate-pulse" />
                 LIVE
               </span>
-              {a?.result && b?.result && (
+              {!spoilerFree && a?.result && b?.result && (
                 <span className="text-xs font-semibold text-zinc-300 tabular-nums">
                   {a.result.gameWins} – {b.result.gameWins}
                 </span>
               )}
             </span>
           ) : completed ? (
-            <span className="text-lg font-bold tabular-nums">
-              <span className={aWon ? 'text-white' : 'text-zinc-500'}>
-                {a?.result?.gameWins ?? 0}
+            spoilerFree ? (
+              <span
+                className="text-sm font-semibold text-zinc-400"
+                title="Hover to reveal the score"
+              >
+                <span className="group-hover:hidden">Final</span>
+                <span className="hidden group-hover:inline">
+                  <CompletedScore a={a} b={b} spoilerFree />
+                </span>
               </span>
-              <span className="mx-1 text-zinc-600">–</span>
-              <span className={bWon ? 'text-white' : 'text-zinc-500'}>
-                {b?.result?.gameWins ?? 0}
-              </span>
-            </span>
+            ) : (
+              <CompletedScore a={a} b={b} />
+            )
           ) : (
             <span className="flex flex-col items-center">
               {showDay && (
@@ -206,7 +245,16 @@ export default function MatchCard({
             </span>
           )}
         </div>
-        {b && <TeamSide team={b} completed={completed} won={bWon} mirrored favorite={isFav(b)} />}
+        {b && (
+          <TeamSide
+            team={b}
+            completed={completed}
+            won={bWon}
+            mirrored
+            favorite={isFav(b)}
+            spoilerFree={spoilerFree}
+          />
+        )}
       </div>
     </a>
   )
@@ -219,6 +267,7 @@ export function MatchList({
   grid = false,
   favorites = [],
   watchUrls = {},
+  spoilerFree = false,
 }: {
   events: ScheduleEvent[]
   now: number
@@ -227,6 +276,7 @@ export function MatchList({
   grid?: boolean
   favorites?: readonly string[]
   watchUrls?: Record<string, string>
+  spoilerFree?: boolean
 }) {
   if (grid) {
     return (
@@ -240,6 +290,7 @@ export function MatchList({
             showDay
             favorites={favorites}
             watchUrls={watchUrls}
+            spoilerFree={spoilerFree}
           />
         ))}
       </div>
@@ -266,6 +317,7 @@ export function MatchList({
               showLeague={showLeague}
               favorites={favorites}
               watchUrls={watchUrls}
+              spoilerFree={spoilerFree}
             />
           </Fragment>
         )

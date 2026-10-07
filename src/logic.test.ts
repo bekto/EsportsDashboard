@@ -170,14 +170,14 @@ describe('leagueSections', () => {
   ]
 
   it('honors prefs.order first, then default ranking; drops hidden and completed-only leagues', () => {
-    const sections = leagueSections(leagues, events, { hidden: ['lck'], order: ['lec'], favorites: [] })
+    const sections = leagueSections(leagues, events, { hidden: ['lck'], order: ['lec'], favorites: [], spoilerFree: false })
     expect(sections.map((s) => s.slug)).toEqual(['lec', 'worlds', 'nacl'])
     expect(sections[1].upcoming.map((e) => e.startTime)).toEqual([iso(2)])
     expect(sections[1].recent).toEqual([])
   })
 
   it('falls back to displayPriority status rank then position', () => {
-    const sections = leagueSections(leagues, events, { hidden: [], order: [], favorites: [] })
+    const sections = leagueSections(leagues, events, { hidden: [], order: [], favorites: [], spoilerFree: false })
     expect(sections.map((s) => s.slug)).toEqual(['worlds', 'lec', 'nacl', 'lck'])
   })
 
@@ -186,6 +186,7 @@ describe('leagueSections', () => {
       hidden: [],
       order: [],
       favorites: [],
+      spoilerFree: false,
     })
     expect(sections.map((s) => s.slug)).toEqual(['worlds', 'lec', 'nacl', 'lck', 'mystery'])
     expect(sections[4]).toMatchObject({ name: 'Mystery Cup', region: '', image: null })

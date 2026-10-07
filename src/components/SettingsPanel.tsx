@@ -19,6 +19,7 @@ interface Props {
   unhide: (slug: string) => void
   move: (slug: string, dir: -1 | 1, visibleOrder: string[]) => void
   toggleFavorite: (code: string) => void
+  toggleSpoilerFree: () => void
   reset: () => void
 }
 
@@ -33,6 +34,7 @@ export default function SettingsPanel({
   unhide,
   move,
   toggleFavorite,
+  toggleSpoilerFree,
   reset,
 }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -177,6 +179,22 @@ export default function SettingsPanel({
       </div>
 
       <div className="flex-1 overflow-y-auto py-2">
+        <h3 className="px-4 pt-1 pb-1 text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+          Preferences
+        </h3>
+        <label className="flex items-center gap-2 px-4 py-2">
+          <input
+            type="checkbox"
+            checked={prefs.spoilerFree}
+            onChange={toggleSpoilerFree}
+            className="h-4 w-4 accent-sky-500"
+          />
+          <span className="text-sm">Spoiler-free mode</span>
+        </label>
+        <p className="px-4 pb-2 text-xs text-zinc-600">
+          Hides winners and series scores on completed and live matches until you hover them.
+        </p>
+
         <h3 className="flex items-center gap-2 px-4 pt-1 pb-1 text-xs font-semibold tracking-wide text-zinc-500 uppercase">
           <StarIcon className="h-3.5 w-3.5 text-amber-400" />
           Favorite teams

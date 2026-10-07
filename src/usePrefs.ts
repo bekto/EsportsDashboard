@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Prefs } from './logic'
 
 const KEY = 'lolDash.prefs.v1'
-const DEFAULT_PREFS: Prefs = { hidden: [], order: [], favorites: [] }
+const DEFAULT_PREFS: Prefs = { hidden: [], order: [], favorites: [], spoilerFree: false }
 
 function readPrefs(): Prefs {
   try {
@@ -14,6 +14,7 @@ function readPrefs(): Prefs {
       hidden: p.hidden,
       order: p.order,
       favorites: Array.isArray(p.favorites) ? p.favorites : [],
+      spoilerFree: typeof p.spoilerFree === 'boolean' ? p.spoilerFree : false,
     }
   } catch {
     return DEFAULT_PREFS
@@ -60,6 +61,10 @@ export function usePrefs() {
 
   const reset = useCallback(() => setPrefs(DEFAULT_PREFS), [])
 
+  const toggleSpoilerFree = useCallback(() => {
+    setPrefs((p) => ({ ...p, spoilerFree: !p.spoilerFree }))
+  }, [])
+
   const toggleFavorite = useCallback((code: string) => {
     setPrefs((p) => ({
       ...p,
@@ -69,5 +74,5 @@ export function usePrefs() {
     }))
   }, [])
 
-  return { prefs, hide, unhide, move, reset, toggleFavorite }
+  return { prefs, hide, unhide, move, reset, toggleFavorite, toggleSpoilerFree }
 }

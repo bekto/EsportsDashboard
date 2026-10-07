@@ -11,6 +11,8 @@ export interface Prefs {
   order: string[]
   /** Team codes marked as favorites; their matches score higher for HOT. */
   favorites: string[]
+  /** Hide winners and series scores so results can't be spoiled. */
+  spoilerFree: boolean
 }
 
 export interface Section {
