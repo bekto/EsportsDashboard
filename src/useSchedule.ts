@@ -61,17 +61,26 @@ export function useSchedule() {
     if (!c || Date.now() - c.fetchedAt > TTL_MS) void refresh()
   }, [refresh])
 
-  // cadence: 60s while anything is live or starts soon, else 5min
+  // cadence: 60s while anything is live or starts soon, else 5min.
+  // Self-rescheduling timeout so the timer identity is stable across fetches
+  // (the cadence is recomputed from the latest data each time it fires).
   useEffect(() => {
-    if (!data) return
-    const hot = data.events.some(
-      (e) => e.state === 'inProgress' || (e.state === 'unstarted' && Date.parse(e.startTime) - Date.now() <= SOON_MS),
-    )
-    const id = setInterval(() => {
-      if (document.visibilityState === 'visible') void refresh()
-    }, hot ? FAST_MS : SLOW_MS)
-    return () => clearInterval(id)
-  }, [data, refresh])
+    let timeout: ReturnType<typeof setTimeout>
+    const schedule = () => {
+      const events = dataRef.current?.events ?? []
+      const hot = events.some(
+        (e) =>
+          e.state === 'inProgress' ||
+          (e.state === 'unstarted' && Date.parse(e.startTime) - Date.now() <= SOON_MS),
+      )
+      timeout = setTimeout(() => {
+        if (document.visibilityState === 'visible') void refresh()
+        schedule()
+      }, hot ? FAST_MS : SLOW_MS)
+    }
+    schedule()
+    return () => clearTimeout(timeout)
+  }, [refresh])
 
   // refetch on tab return if stale
   useEffect(() => {
