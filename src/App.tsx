@@ -11,6 +11,7 @@ import {
 import { pickStream, streamUrl } from './api'
 import { usePrefs } from './usePrefs'
 import { useSchedule } from './useSchedule'
+import { useActiveSection } from './useActiveSection'
 import { ago, useNow } from './time'
 import Header from './components/Header'
 import HotSection from './components/HotSection'
@@ -99,6 +100,8 @@ export default function App() {
     [filtering, sections, hot],
   )
 
+  const active = useActiveSection(nav.map((item) => item.href.slice(1)))
+
   const noData = events.length === 0 && leagues.length === 0
 
   return (
@@ -109,6 +112,7 @@ export default function App() {
         loading={loading}
         liveCount={liveCount}
         nav={nav}
+        active={active}
         onRefresh={refresh}
         onSettings={() => setSettingsOpen(true)}
       />

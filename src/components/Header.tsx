@@ -13,6 +13,7 @@ interface Props {
   loading: boolean
   liveCount: number
   nav: NavItem[]
+  active: string | null
   onRefresh: () => void
   onSettings: () => void
 }
@@ -23,6 +24,7 @@ export default function Header({
   loading,
   liveCount,
   nav,
+  active,
   onRefresh,
   onSettings,
 }: Props) {
@@ -98,7 +100,12 @@ export default function Header({
             <a
               key={item.href}
               href={item.href}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-300 transition-colors hover:border-zinc-700 hover:bg-zinc-800"
+              aria-current={item.href === `#${active}` ? 'true' : undefined}
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                item.href === `#${active}`
+                  ? 'border-sky-500/60 bg-sky-500/10 text-sky-200'
+                  : 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-700 hover:bg-zinc-800'
+              }`}
             >
               {item.image && (
                 <img
