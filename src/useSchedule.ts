@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchLeagues, fetchSchedule } from './api'
-import type { League, ScheduleEvent } from './api'
+import { fetchLeagues, fetchSchedule, fetchSnapshot } from './api'
+import type { ScheduleData } from './api'
 
 const KEY = 'lolDash.data.v1'
 const TTL_MS = 5 * 60_000
@@ -8,7 +8,7 @@ const FAST_MS = 60_000
 const SLOW_MS = 5 * 60_000
 const SOON_MS = 15 * 60_000
 
-type Cache = { fetchedAt: number; leagues: League[]; events: ScheduleEvent[] }
+type Cache = ScheduleData
 
 function readCache(): Cache | null {
   try {
@@ -46,12 +46,28 @@ export function useSchedule() {
         /* quota / private mode: keep serving from memory */
       }
       setData(next)
+      dataRef.current = next
       setError(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
       inFlight.current = false
       setLoading(false)
+    }
+  }, [])
+
+  // Cold start with no cache: show the build-time snapshot immediately, then
+  // let the regular refresh race ahead and replace it when the API responds.
+  useEffect(() => {
+    if (dataRef.current) return
+    let cancelled = false
+    void fetchSnapshot().then((snap) => {
+      if (cancelled || !snap || dataRef.current) return
+      dataRef.current = snap
+      setData(snap)
+    })
+    return () => {
+      cancelled = true
     }
   }, [])
 

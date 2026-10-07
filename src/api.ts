@@ -173,3 +173,29 @@ export async function fetchSchedule(): Promise<ScheduleEvent[]> {
   if (skipped > 0) console.warn(`lolesports: skipped ${skipped} malformed schedule event(s)`)
   return events
 }
+
+export interface ScheduleData {
+  fetchedAt: number
+  leagues: League[]
+  events: ScheduleEvent[]
+}
+
+/**
+ * Last-known-good dataset baked into the build (see scripts/snapshot.mjs).
+ * Best-effort: returns null when absent or malformed, so callers can ignore it.
+ */
+export async function fetchSnapshot(): Promise<ScheduleData | null> {
+  try {
+    const url = new URL('schedule.json', document.baseURI)
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const body: unknown = await res.json()
+    if (!isObj(body) || !Array.isArray(body.leagues) || !Array.isArray(body.events)) return null
+    const leagues = body.leagues.map(parseLeague).filter((l): l is League => l !== null)
+    const events = body.events.map(parseEvent).filter((e): e is ScheduleEvent => e !== null)
+    if (leagues.length === 0 || events.length === 0) return null
+    return { fetchedAt: isNum(body.fetchedAt) ? body.fetchedAt : 0, leagues, events }
+  } catch {
+    return null
+  }
+}
